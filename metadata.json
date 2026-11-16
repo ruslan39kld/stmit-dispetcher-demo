@@ -1,0 +1,6 @@
+{
+  "name": "Диспетчер смены",
+  "description": "Интерактивный демо-стенд агентной AI-системы диспетчеризации производства: сбор сменных заданий, контроль отклонений и разбор простоев по цехам.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
