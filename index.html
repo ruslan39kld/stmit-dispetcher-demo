@@ -21,10 +21,3155 @@
       href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            spacing: {
+              4.5: '1.125rem',
+            },
+            boxShadow: {
+              xs: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background-color: #f8fafc;
+        color: #0f172a;
+      }
+
+      h1, h2, h3, h4, .font-display {
+        font-family: var(--font-display);
+      }
+
+      .font-mono-tabular {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .tabular-nums {
+        font-variant-numeric: tabular-nums;
+      }
+
+      @keyframes field-highlight-flash {
+        0% {
+          background-color: rgba(37, 99, 235, 0.16);
+          border-color: rgba(37, 99, 235, 0.55);
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+        100% {
+          background-color: rgba(248, 250, 252, 1);
+          border-color: rgba(226, 232, 240, 1);
+          box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+        }
+      }
+
+      .animate-field-flash {
+        animation: field-highlight-flash 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      @keyframes typing-dot {
+        0%, 80%, 100% {
+          transform: translateY(0);
+          opacity: 0.35;
+        }
+        40% {
+          transform: translateY(-3px);
+          opacity: 1;
+        }
+      }
+
+      .typing-dot-1 {
+        animation: typing-dot 1.1s infinite ease-in-out;
+      }
+      .typing-dot-2 {
+        animation: typing-dot 1.1s 0.16s infinite ease-in-out;
+      }
+      .typing-dot-3 {
+        animation: typing-dot 1.1s 0.32s infinite ease-in-out;
+      }
+
+      @keyframes hero-signal-move {
+        0% {
+          left: 0%;
+        }
+        100% {
+          left: 100%;
+        }
+      }
+
+      .animate-hero-signal {
+        animation: hero-signal-move 5.4s linear infinite;
+      }
+
+      @keyframes hero-node-pulse {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 0.6;
+        }
+        50% {
+          transform: scale(1.35);
+          opacity: 0;
+        }
+      }
+
+      .animate-hero-node {
+        animation: hero-node-pulse 2.7s ease-in-out infinite;
+      }
+
+      @keyframes active-ring-pulse {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 0.85;
+        }
+        50% {
+          transform: scale(1.18);
+          opacity: 0.25;
+        }
+      }
+
+      .animate-active-ring {
+        animation: active-ring-pulse 1.8s ease-in-out infinite;
+      }
+
+      @keyframes msg-enter {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-msg-enter {
+        animation: msg-enter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      @keyframes outcome-reveal {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-outcome-reveal {
+        opacity: 0;
+        animation: outcome-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .animate-field-flash,
+        .typing-dot-1,
+        .typing-dot-2,
+        .typing-dot-3,
+        .animate-hero-signal,
+        .animate-hero-node,
+        .animate-active-ring,
+        .animate-msg-enter,
+        .animate-outcome-reveal {
+          animation: none !important;
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      }
+    </style>
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased selection:bg-blue-900 selection:text-white">
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+
+    <script>
+      (function () {
+        'use strict';
+
+        // ============================================================
+        // 1. AGENT SYSTEM DATA (6 AGENTS, CLASSIFIER, RULES, FORMATS)
+        // ============================================================
+        const AGENTS = [
+          {
+            id: 'planner',
+            order: 1,
+            name: 'Планировщик',
+            shortName: 'Планировщик',
+            stageLabel: 'Постановка задания',
+            roleSummary: 'Формирует сменное задание, нормы в час и критические отметки.',
+            fullSpecification:
+              'Формирует сменное задание из производственного плана: объём по цеху, норма выработки в час, критические отметки (кому и когда нужна продукция смены). Выясняет у мастера, принято ли задание, фиксирует замечания и риски в журнал.',
+          },
+          {
+            id: 'collector',
+            order: 2,
+            name: 'Сборщик',
+            shortName: 'Сборщик',
+            stageLabel: 'Сбор факта',
+            roleSummary: 'Собирает точные цифры выработки по часам, без «примерно».',
+            fullSpecification:
+              'Собирает фактические данные по ходу смены: сколько единиц продукции сделано к текущему часу. Не принимает «примерно» и «нормально» — дожимает до точной цифры. Если данных нет — фиксирует, что смена идёт вслепую, и запрашивает повторно.',
+          },
+          {
+            id: 'controller',
+            order: 3,
+            name: 'Контролёр отклонений',
+            shortName: 'Контролёр',
+            stageLabel: 'Контроль отклонений',
+            roleSummary: 'Сравнивает факт с планом и ловит выход за допуск −10%.',
+            fullSpecification:
+              'Сравнивает факт с планом: процент выполнения, абсолютное отклонение, темп (единиц/час). Допуск — минус 10%. Отклонение выше допуска = сигнал и обязательный разбор причины.',
+          },
+          {
+            id: 'detective',
+            order: 4,
+            name: 'Детектив простоев',
+            shortName: 'Детектив',
+            stageLabel: 'Разбор простоев',
+            roleSummary: 'Открывает карту простоя и относит причину к 1 из 5 групп.',
+            fullSpecification:
+              'Открывает карту на каждый простой: время начала, длительность, узел, действия бригады. Классифицирует причину по 5 группам: оборудование; материалы/комплектующие; кадры; энергия/инфраструктура; качество/брак. Любой простой дольше 15 минут фиксируется обязательно — «наверное» и «забейте» не принимает.',
+          },
+          {
+            id: 'forecaster',
+            order: 5,
+            name: 'Прогнозист',
+            shortName: 'Прогнозист',
+            stageLabel: 'Прогноз',
+            roleSummary: 'Считает итог смены и предлагает варианты с расчётом эффекта.',
+            fullSpecification:
+              'Считает прогноз выполнения задания к концу смены с учётом текущего темпа и зафиксированных простоев. Предлагает варианты действий с расчётом эффекта: перебросить людей, оставить как есть, сдать уменьшенную норму. Решение принимает мастер — Прогнозист фиксирует его и пересчитывает прогноз.',
+          },
+          {
+            id: 'report',
+            order: 6,
+            name: 'Отчёт',
+            shortName: 'Отчёт',
+            stageLabel: 'Итоговая сводка',
+            roleSummary: 'Считает балл смены (0–100) с зачётом только по годной продукции.',
+            fullSpecification:
+              'В конце смены формирует сводку: план/факт, отклонение, хронология простоев с причинами, балл смены (0–100), выводы и 2–3 рекомендации на следующую смену. Зачёт только по годной продукции: количество без качества — не результат.',
+          },
+        ];
+
+        const DOWNTIME_CLASSIFIER_GROUPS = [
+          'Оборудование',
+          'Материалы / комплектующие',
+          'Кадры',
+          'Энергия / инфраструктура',
+          'Качество / брак',
+        ];
+
+        const SYSTEM_RULES = [
+          'Агенты работают последовательно и передают следующему структурированные данные: цех, план, факт, отклонение %, простой в минутах и причину из классификатора.',
+          'Агент не выдумывает данные: если мастер не сообщил точную цифру или причину — система запрашивает повторно или уточняет на участке.',
+          'Допуск по отклонению от графика — −10%. Любой простой дольше 15 минут открывает обязательную карту с конкретной причиной из классификатора.',
+          'Зачёт выполнения плана ведётся только по годной продукции: количество без качества в итог не идёт.',
+        ];
+
+        const SYSTEM_OUTPUT_FORMAT =
+          'СМЕНА [номер/время]. План/факт: [цифры]. Отклонение: [%, в допуске/вне допуска]. Простои: [хронология с причинами]. Балл смены: [0–100]. Выводы и рекомендации: [2–3 пункта].';
+
+        const SYSTEM_LAUNCH_COMMAND =
+          '«Начать смену: [цех], план [N единиц], мастер [имя]»';
+
+        const PROJECT_DESCRIPTION =
+          '«Диспетчер смены» — демо агентной системы диспетчеризации производства. Шесть агентов собирают сменное задание, следят за отклонениями от плана и выясняют причину каждого простоя по цехам. Посетитель играет роль мастера смены: выбирает реплики, а панель показывает, какой агент что решил на каждом шаге. Для производственных компаний, которые хотят видеть смену в цифрах, а не в объяснительных.';
+
+        // ============================================================
+        // 2. THREE COMPLETE SCENARIOS DATA
+        // ============================================================
+        const SCENARIOS = [
+          {
+            id: 'scenario-1',
+            number: 1,
+            title: 'Ночная смена: сломался фрезерный станок',
+            workshop: 'Цех металлообработки',
+            stepsCount: 6,
+            cardSummary:
+              'Сценарий 1 · Цех металлообработки · 6 шагов. Ночная смена: сломался фрезерный станок — план под угрозой',
+            foremanName: 'Иван',
+            foremanRole: 'Иван, мастер ночной смены цеха металлообработки',
+            shiftWindow: 'Ночная смена · 20:00–8:00',
+            launchCommand: 'Начать смену: цех металлообработки, план 120 деталей, мастер Иван',
+            steps: [
+              {
+                stepNumber: 1,
+                agentId: 'planner',
+                systemPrompt:
+                  'Ночная смена, 20:00–8:00. План: 120 деталей — корпус К-7. Термический цех ждёт первую партию из 80 деталей к 6:00. Норма — 15 деталей в час. Задание принимаете?',
+                options: [
+                  {
+                    id: 's1-1-main',
+                    text: 'Принимаю. Люди на месте, станки в порядке.',
+                    isPrimary: true,
+                    systemResponse:
+                      'Задание закреплено. Планировщик передал нормы Контролёру. Начинаю сбор факта.',
+                  },
+                  {
+                    id: 's1-1-alt1',
+                    text: '120 — многовато, в прошлую ночь сделали 105.',
+                    isPrimary: false,
+                    returnsToButtons: true,
+                    systemResponse:
+                      'Прошлая смена сделала 105 из-за простоя — планёр это учёл и подтвердил 120. Итак, задание принимаете?',
+                    updatedReasoning: {
+                      agentName: 'Планировщик',
+                      receivedInput:
+                        'Сомнение мастера Ивана по объёму плана (ссылка на прошлую смену: 105 дет.).',
+                      decisionLogic:
+                        'Проверена причина снижения прошлой смены (внеплановый простой). План 120 деталей подтверждён без снижения нормы, ожидается подтверждение мастера.',
+                      handoffPayload: {
+                        workshop: 'Цех металлообработки',
+                        plan: '120 дет. (15 дет./час)',
+                        fact: 'Смена не стартовала',
+                        deviation: '0%',
+                        downtimeMinutes: '0 мин',
+                        classifierReason: 'Риск по норме уточнён',
+                      },
+                    },
+                  },
+                  {
+                    id: 's1-1-alt2',
+                    text: 'А если термичка не заберёт партию?',
+                    isPrimary: false,
+                    returnsToButtons: true,
+                    systemResponse:
+                      'Термичка подтвердила заявку утром. Риск записан в журнал. Возвращаемся к заданию.',
+                    updatedPanelFields: [
+                      { key: 'plan', label: 'План', value: '120 дет.', tone: 'neutral' },
+                      { key: 'norm', label: 'Норма', value: '15 дет./час', tone: 'neutral' },
+                      {
+                        key: 'critical',
+                        label: 'Критично',
+                        value: '80 шт. к 6:00 (риск в журнале)',
+                        tone: 'warning',
+                      },
+                    ],
+                    updatedReasoning: {
+                      agentName: 'Планировщик',
+                      receivedInput:
+                        'Запрос мастера о риске приёмки партии термическим цехом к 6:00.',
+                      decisionLogic:
+                        'Поднята подтверждённая заявка смежного цеха. Замечание внесено в журнал смены, ожидается принятие задания мастером.',
+                      handoffPayload: {
+                        workshop: 'Цех металлообработки',
+                        plan: '120 дет. (15 дет./час)',
+                        fact: 'Смена не стартовала',
+                        deviation: '0%',
+                        downtimeMinutes: '0 мин',
+                        classifierReason: 'Риск смежника зафиксирован',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  { key: 'plan', label: 'План', value: '120 дет.', tone: 'neutral' },
+                  { key: 'norm', label: 'Норма', value: '15 дет./час', tone: 'neutral' },
+                  { key: 'critical', label: 'Критично', value: '80 шт. к 6:00', tone: 'warning' },
+                ],
+                reasoning: {
+                  agentName: 'Планировщик',
+                  receivedInput:
+                    'Команда запуска: цех металлообработки, план 120 деталей (корпус К-7), смена 20:00–8:00, мастер Иван.',
+                  decisionLogic:
+                    'Рассчитана часовая норма (15 дет./час с учётом отгрузки в термичку), выделена критическая отметка 80 шт. к 6:00. Запрошено подтверждение принятия задания.',
+                  handoffPayload: {
+                    workshop: 'Цех металлообработки',
+                    plan: '120 дет.',
+                    fact: '0 дет. (старт смены)',
+                    deviation: '0%',
+                    downtimeMinutes: '0 мин',
+                    classifierReason: 'Не применимо',
+                  },
+                },
+              },
+              {
+                stepNumber: 2,
+                agentId: 'collector',
+                systemPrompt:
+                  '00:00. По графику должно быть 60 деталей. Сколько готово фактически?',
+                options: [
+                  {
+                    id: 's1-2-main',
+                    text: '58 деталей, идём по графику.',
+                    isPrimary: true,
+                    systemResponse:
+                      'Принято: 58 из 60, отклонение −3% — в пределах допуска. Следующий сбор в 2:00.',
+                  },
+                  {
+                    id: 's1-2-alt1',
+                    text: 'Не считал ещё, сейчас подойду к станкам.',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse:
+                      'Жду цифру — без неё смена идёт вслепую. Мастер вернулся: 58. Фиксирую.',
+                    updatedReasoning: {
+                      agentName: 'Сборщик',
+                      receivedInput:
+                        'Первичный ответ мастера без точных данных («не считал ещё»).',
+                      decisionLogic:
+                        'Зафиксировано отсутствие оперативного учёта, выставлен повторный запрос по правилу «не идти вслепую». После обхода получена точная цифра: 58 деталей (−3%, в допуске).',
+                      handoffPayload: {
+                        workshop: 'Цех металлообработки',
+                        plan: '60 дет. к 00:00',
+                        fact: '58 дет.',
+                        deviation: '−3%',
+                        downtimeMinutes: '0 мин',
+                        classifierReason: 'В допуске',
+                      },
+                    },
+                  },
+                  {
+                    id: 's1-2-alt2',
+                    text: 'Примерно половина.',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse:
+                      '«Примерно» в отчёт не пойдёт — нужна точная цифра. Мастер уточнил: 58.',
+                    updatedReasoning: {
+                      agentName: 'Сборщик',
+                      receivedInput: 'Приблизительная оценка мастера («примерно половина»).',
+                      decisionLogic:
+                        'Аппроксимация отклонена по правилам Сборщика. Запрошен точный счёт по таре/счётчику станка, зафиксировано 58 деталей (−3%, в допуске −10%).',
+                      handoffPayload: {
+                        workshop: 'Цех металлообработки',
+                        plan: '60 дет. к 00:00',
+                        fact: '58 дет.',
+                        deviation: '−3%',
+                        downtimeMinutes: '0 мин',
+                        classifierReason: 'В допуске',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  { key: 'fact', label: 'Факт 00:00', value: '58', tone: 'nominal' },
+                  { key: 'plan', label: 'План 00:00', value: '60', tone: 'neutral' },
+                  { key: 'status', label: 'Статус', value: 'по графику', tone: 'nominal' },
+                ],
+                reasoning: {
+                  agentName: 'Сборщик',
+                  receivedInput: 'Плановый срез на 00:00 — 60 деталей; допуск Контролёра — −10%.',
+                  decisionLogic:
+                    'Получена точная цифра выработки (58 дет.). Отклонение −3% укладывается в допуск −10%, разбор причины не требуется.',
+                  handoffPayload: {
+                    workshop: 'Цех металлообработки',
+                    plan: '60 дет. к 00:00 (120 всего)',
+                    fact: '58 дет.',
+                    deviation: '−3%',
+                    downtimeMinutes: '0 мин',
+                    classifierReason: 'Отклонение в допуске',
+                  },
+                },
+              },
+              {
+                stepNumber: 3,
+                agentId: 'controller',
+                systemPrompt:
+                  '2:00. Сигнал: выработка 74 вместо 90 по графику. Отклонение −18% — это выше допуска. В 1:40 встал фрезерный станок Ф-3. Что случилось?',
+                options: [
+                  {
+                    id: 's1-3-main',
+                    text: 'Заклинило шпиндель на Ф-3. Слесарь уже разбирает.',
+                    isPrimary: true,
+                    systemResponse:
+                      'Принято. Детектив простоев открыл карту: станок Ф-3, 1:40, причина — оборудование.',
+                  },
+                  {
+                    id: 's1-3-alt1',
+                    text: 'Сами разберёмся, не до отчётов.',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse:
+                      'Понимаю, аврал. Но без причины простой не закрыть — это правило. Наладчик сообщил: шпиндель Ф-3. Записал.',
+                    updatedReasoning: {
+                      agentName: 'Контролёр отклонений',
+                      receivedInput:
+                        'Факт 2:00 = 74 дет. при плане 90 дет. (−18%). Отказ мастера от пояснения.',
+                      decisionLogic:
+                        'Отклонение −18% превышает допуск −10%. По правилу обязательного разбора причина запрошена у наладчика напрямую: шпиндель станка Ф-3. Передано Детективу.',
+                      handoffPayload: {
+                        workshop: 'Цех металлообработки',
+                        plan: '90 дет. к 2:00',
+                        fact: '74 дет.',
+                        deviation: '−18% (вне допуска)',
+                        downtimeMinutes: 'Старт 1:40 (открыт)',
+                        classifierReason: 'Оборудование (шпиндель Ф-3)',
+                      },
+                    },
+                  },
+                  {
+                    id: 's1-3-alt2',
+                    text: 'Не знаю, станок просто встал.',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse:
+                      'Детектив уточнил у наладчика напрямую: заклинил шпиндель Ф-3. Записано.',
+                    updatedReasoning: {
+                      agentName: 'Контролёр отклонений',
+                      receivedInput:
+                        'Факт 2:00 = 74 дет. при плане 90 дет. (−18%). Мастер не назвал узел.',
+                      decisionLogic:
+                        'Фиксируется сигнал отклонения −18% (выше допуска −10%). Причина не должна оставаться «просто встал» — уточнена через наладчика: заклинил шпиндель Ф-3.',
+                      handoffPayload: {
+                        workshop: 'Цех металлообработки',
+                        plan: '90 дет. к 2:00',
+                        fact: '74 дет.',
+                        deviation: '−18% (вне допуска)',
+                        downtimeMinutes: 'Старт 1:40 (открыт)',
+                        classifierReason: 'Оборудование (шпиндель Ф-3)',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  { key: 'deviation', label: 'Отклонение', value: '−18%', tone: 'alert' },
+                  { key: 'pace', label: 'Темп', value: '9 дет./час', tone: 'warning' },
+                  { key: 'tolerance', label: 'Допуск', value: '−10%', tone: 'neutral' },
+                ],
+                reasoning: {
+                  agentName: 'Контролёр отклонений',
+                  receivedInput:
+                    'Срез 2:00: факт 74 дет., план 90 дет. (−16 дет.), остановка Ф-3 в 1:40.',
+                  decisionLogic:
+                    'Вычислено отклонение −18% и падение темпа до 9 дет./час. Порог −10% пробит — инициирован обязательный разбор причины и открытие карты простоя.',
+                  handoffPayload: {
+                    workshop: 'Цех металлообработки',
+                    plan: '90 дет. к 2:00',
+                    fact: '74 дет.',
+                    deviation: '−18% (вне допуска)',
+                    downtimeMinutes: 'С 1:40 (карта открыта)',
+                    classifierReason: 'Оборудование',
+                  },
+                },
+              },
+              {
+                stepNumber: 4,
+                agentId: 'detective',
+                systemPrompt:
+                  'Карта простоя: станок Ф-3, встал в 1:40. Нужны длительность и действия бригады.',
+                options: [
+                  {
+                    id: 's1-4-main',
+                    text: 'Полтора часа: слесарь менял подшипник шпинделя, запасной нашёлся на складе.',
+                    isPrimary: true,
+                    systemResponse:
+                      'Простой закрыт: 90 минут, причина — оборудование, узел — шпиндель Ф-3. Действия правильные: ремонт начат сразу, запчасть была на складе.',
+                  },
+                  {
+                    id: 's1-4-alt1',
+                    text: 'Часа два, наверное.',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse:
+                      '«Наверное» не подойдёт: по меткам станка простой — ровно 90 минут. Так и записано.',
+                    updatedReasoning: {
+                      agentName: 'Детектив простоев',
+                      receivedInput:
+                        'Оценка мастера «часа два, наверное» по карте Ф-3 (старт 1:40).',
+                      decisionLogic:
+                        'Приблизительная длительность отклонена. Сверена телеметрия/метки станка (1:40–3:10): ровно 90 минут. Класс причины: «Оборудование», узел: шпиндель Ф-3.',
+                      handoffPayload: {
+                        workshop: 'Цех металлообработки',
+                        plan: '120 дет.',
+                        fact: '74 дет. (на 2:00)',
+                        deviation: '−18%',
+                        downtimeMinutes: '90 мин (1:40–3:10)',
+                        classifierReason: 'Оборудование (шпиндель Ф-3)',
+                      },
+                    },
+                  },
+                  {
+                    id: 's1-4-alt2',
+                    text: 'Да не важно, наверстаем.',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse:
+                      'Любой простой дольше 15 минут фиксируется обязательно — без этого не найти слабое место цеха. Записано: 90 минут.',
+                    updatedReasoning: {
+                      agentName: 'Детектив простоев',
+                      receivedInput: 'Попытка пропустить фиксацию простоя станка Ф-3.',
+                      decisionLogic:
+                        'По правилу любой простой > 15 минут подлежит обязательной регистрации. По отметкам пуска-останова зафиксированы 90 минут, узел — шпиндель Ф-3, группа — «Оборудование».',
+                      handoffPayload: {
+                        workshop: 'Цех металлообработки',
+                        plan: '120 дет.',
+                        fact: '74 дет. (на 2:00)',
+                        deviation: '−18%',
+                        downtimeMinutes: '90 мин (1:40–3:10)',
+                        classifierReason: 'Оборудование (шпиндель Ф-3)',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  { key: 'downtime', label: 'Простой', value: '90 мин', tone: 'alert' },
+                  { key: 'reason', label: 'Причина', value: 'оборудование', tone: 'warning' },
+                  { key: 'node', label: 'Узел', value: 'шпиндель Ф-3', tone: 'neutral' },
+                ],
+                reasoning: {
+                  agentName: 'Детектив простоев',
+                  receivedInput:
+                    'Открытая карта простоя: станок Ф-3, останов в 1:40, отклонение −18%.',
+                  decisionLogic:
+                    'Длительность 90 мин (>15 мин, обязательная фиксация). Причина отнесена к группе «Оборудование» (подшипник шпинделя Ф-3), отмечено наличие запчасти на складе и оперативный ремонт.',
+                  handoffPayload: {
+                    workshop: 'Цех металлообработки',
+                    plan: '120 дет.',
+                    fact: '74 дет. (на 2:00)',
+                    deviation: '−18%',
+                    downtimeMinutes: '90 мин',
+                    classifierReason: 'Оборудование (шпиндель Ф-3)',
+                  },
+                },
+              },
+              {
+                stepNumber: 5,
+                agentId: 'forecaster',
+                systemPrompt:
+                  '3:10, Ф-3 снова в строю. Текущий темп — 9 деталей в час вместо 15. Прогноз к 8:00: 109 деталей вместо 120. Варианты: перебросить двух наладчиков с участка Б — темп вырастет до 13 дет./час и к 8:00 будет около 119; или оставить как есть — сдадим 109. Что решаем?',
+                options: [
+                  {
+                    id: 's1-5-reallocate',
+                    text: 'Перебрасываю двоих с участка Б.',
+                    isPrimary: true,
+                    branchKey: 'reallocate',
+                    systemResponse:
+                      'Решение зафиксировано. Прогноз обновлён: 118–120 деталей к 8:00. Ждём конца смены.',
+                    updatedPanelFields: [
+                      {
+                        key: 'forecast',
+                        label: 'Прогноз',
+                        value: '118–120 дет.',
+                        tone: 'nominal',
+                      },
+                      {
+                        key: 'decision',
+                        label: 'Решение',
+                        value: 'переброска (2 чел.)',
+                        tone: 'nominal',
+                      },
+                      { key: 'effect', label: 'Эффект', value: '+10 дет.', tone: 'nominal' },
+                    ],
+                    updatedReasoning: {
+                      agentName: 'Прогнозист',
+                      receivedInput:
+                        'Выбор мастера: перебросить двух наладчиков с участка Б с 3:10.',
+                      decisionLogic:
+                        'Темп пересчитан с 9 до 13 дет./час на оставшиеся часы смены. Прогноз поднят с 109 до 118–120 деталей (отклонение в пределах −1%).',
+                      handoffPayload: {
+                        workshop: 'Цех металлообработки',
+                        plan: '120 дет.',
+                        fact: 'Прогноз 118–120 дет.',
+                        deviation: 'Ожидаемо −0,8%',
+                        downtimeMinutes: '90 мин',
+                        classifierReason: 'Оборудование (компенсировано переброской)',
+                      },
+                    },
+                  },
+                  {
+                    id: 's1-5-keep',
+                    text: 'Оставить как есть, людей не трогаю.',
+                    isPrimary: false,
+                    branchKey: 'keep',
+                    systemResponse:
+                      'Решение мастера зафиксировано: без переброски. Прогноз: 109 деталей, отклонение −9%. Это пойдёт в сводку.',
+                    updatedPanelFields: [
+                      { key: 'forecast', label: 'Прогноз', value: '109 дет.', tone: 'warning' },
+                      {
+                        key: 'decision',
+                        label: 'Решение',
+                        value: 'без переброски',
+                        tone: 'warning',
+                      },
+                      { key: 'effect', label: 'Эффект', value: '0 дет.', tone: 'neutral' },
+                    ],
+                    updatedReasoning: {
+                      agentName: 'Прогнозист',
+                      receivedInput:
+                        'Выбор мастера: оставить текущую расстановку без переброски людей.',
+                      decisionLogic:
+                        'Темп остаётся 9 дет./час до 8:00. Прогноз зафиксирован на уровне 109 деталей (около −9% к плану), управленческий риск передан в итоговый Отчёт.',
+                      handoffPayload: {
+                        workshop: 'Цех металлообработки',
+                        plan: '120 дет.',
+                        fact: 'Прогноз 109 дет.',
+                        deviation: 'Ожидаемо −9,2%',
+                        downtimeMinutes: '90 мин',
+                        classifierReason: 'Оборудование + отказ от переброски',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  { key: 'forecast', label: 'Прогноз', value: '109–119 дет.', tone: 'warning' },
+                  {
+                    key: 'decision',
+                    label: 'Решение',
+                    value: 'переброска / без переброски',
+                    tone: 'neutral',
+                  },
+                  { key: 'effect', label: 'Эффект', value: '+10 дет.', tone: 'nominal' },
+                ],
+                reasoning: {
+                  agentName: 'Прогнозист',
+                  receivedInput:
+                    'Завершение простоя 90 мин в 3:10, темп 9 дет./час, остаток времени 4 ч 50 мин до 8:00.',
+                  decisionLogic:
+                    'Смоделированы два сценария: базовый (9 дет./час → 109 дет.) и усиление двумя наладчиками с участка Б (13 дет./час → ~119 дет.). Ожидается решение мастера.',
+                  handoffPayload: {
+                    workshop: 'Цех металлообработки',
+                    plan: '120 дет.',
+                    fact: 'Прогноз 109 / 119 дет.',
+                    deviation: '−9,2% / −0,8%',
+                    downtimeMinutes: '90 мин',
+                    classifierReason: 'Оборудование (шпиндель Ф-3)',
+                  },
+                },
+              },
+              {
+                stepNumber: 6,
+                agentId: 'report',
+                isFinalStep: true,
+                systemPrompt:
+                  '8:00. Смена закрыта. Итоговый отчёт собран: факт 119 из 120 деталей, отклонение −0,8% (в допуске). Балл смены: 88 из 100.',
+                options: [],
+                panelFields: [
+                  { key: 'planFact', label: 'План / Факт', value: '120 / 119', tone: 'nominal' },
+                  {
+                    key: 'deviation',
+                    label: 'Отклонение',
+                    value: '−0,8% (в допуске)',
+                    tone: 'nominal',
+                  },
+                  { key: 'score', label: 'Балл смены', value: '88 / 100', tone: 'nominal' },
+                ],
+                reasoning: {
+                  agentName: 'Отчёт',
+                  receivedInput:
+                    'Данные всей цепочки: план 120, факт 119, простой 90 мин (шпиндель Ф-3), переброска 2 человек.',
+                  decisionLogic:
+                    'Зачтены 119 годных корпусов К-7 (−0,8%, в допуске). Оценена скорость ремонта и управленческое решение о переброске — итоговый балл 88, сформированы рекомендации.',
+                  handoffPayload: {
+                    workshop: 'Цех металлообработки',
+                    plan: '120 дет.',
+                    fact: '119 дет.',
+                    deviation: '−0,8% (в допуске)',
+                    downtimeMinutes: '90 мин',
+                    classifierReason: 'Оборудование (шпиндель Ф-3)',
+                  },
+                },
+                branchOverrides: {
+                  reallocate: {
+                    systemPrompt:
+                      '8:00. Смена закрыта. Итоговый отчёт собран: факт 119 из 120 деталей, отклонение −0,8% (в допуске). Балл смены: 88 из 100.',
+                    panelFields: [
+                      {
+                        key: 'planFact',
+                        label: 'План / Факт',
+                        value: '120 / 119',
+                        tone: 'nominal',
+                      },
+                      {
+                        key: 'deviation',
+                        label: 'Отклонение',
+                        value: '−0,8% (в допуске)',
+                        tone: 'nominal',
+                      },
+                      { key: 'score', label: 'Балл смены', value: '88 / 100', tone: 'nominal' },
+                    ],
+                    reasoning: {
+                      agentName: 'Отчёт',
+                      receivedInput:
+                        'План 120, факт 119 годных деталей, простой 90 мин (оборудование — шпиндель Ф-3), решение: переброска 2 наладчиков.',
+                      decisionLogic:
+                        'Отклонение −0,8% находится в пределах допуска (−10%). Переброска персонала компенсировала 90-минутный простой; балл смены 88/100.',
+                      handoffPayload: {
+                        workshop: 'Цех металлообработки',
+                        plan: '120 дет.',
+                        fact: '119 дет.',
+                        deviation: '−0,8% (в допуске)',
+                        downtimeMinutes: '90 мин',
+                        classifierReason: 'Оборудование (шпиндель Ф-3)',
+                      },
+                    },
+                  },
+                  keep: {
+                    systemPrompt:
+                      '8:00. Смена закрыта. Итоговый отчёт собран: факт 109 из 120 деталей, отклонение −9,2%. Балл смены: 64 из 100.',
+                    panelFields: [
+                      {
+                        key: 'planFact',
+                        label: 'План / Факт',
+                        value: '120 / 109',
+                        tone: 'warning',
+                      },
+                      { key: 'deviation', label: 'Отклонение', value: '−9,2%', tone: 'warning' },
+                      { key: 'score', label: 'Балл смены', value: '64 / 100', tone: 'warning' },
+                    ],
+                    reasoning: {
+                      agentName: 'Отчёт',
+                      receivedInput:
+                        'План 120, факт 109 годных деталей, простой 90 мин (оборудование — шпиндель Ф-3), решение: без переброски.',
+                      decisionLogic:
+                        'Потеряно 11 деталей к плану (−9,2%). В выводы включено как влияние поломки Ф-3, так и отказ от переброски наладчиков; балл смены снижен до 64/100.',
+                      handoffPayload: {
+                        workshop: 'Цех металлообработки',
+                        plan: '120 дет.',
+                        fact: '109 дет.',
+                        deviation: '−9,2%',
+                        downtimeMinutes: '90 мин',
+                        classifierReason: 'Оборудование (шпиндель Ф-3)',
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+            outcomes: {
+              reallocate: {
+                id: 's1-reallocate',
+                shiftLabel: 'Ночная смена, 20:00–8:00 · Цех металлообработки · Мастер Иван',
+                workshop: 'Цех металлообработки',
+                foreman: 'Иван',
+                planFact: 'План 120 · Факт 119 деталей',
+                deviation: '−0,8% (в допуске)',
+                deviationInTolerance: true,
+                downtimeChronology: [
+                  '1:40–3:10 (90 мин) — остановка фрезерного станка Ф-3. Причина: оборудование (заклинил подшипник шпинделя). Слесарь заменил узел со склада.',
+                  '3:10–8:00 — переброска двух наладчиков с участка Б, темп восстановлен до 13 дет./час.',
+                ],
+                score: 88,
+                scoreVerdict: 'Высокий результат смены',
+                conclusions: [
+                  'План практически выполнен — решение о переброске сработало',
+                  'Запас подшипников на складе спас смену',
+                ],
+                recommendations: [
+                  'Плановая замена подшипников Ф-3 раз в квартал',
+                  'Обучить второго слесаря ремонту этого узла',
+                ],
+                formattedSummary:
+                  'СМЕНА Ночная, 20:00–8:00 (Цех металлообработки). План/факт: 120 / 119 дет. Отклонение: −0,8% (в допуске). Простои: 1:40–3:10, 90 мин, оборудование (шпиндель Ф-3). Балл смены: 88. Выводы и рекомендации: переброска людей и складской запас спасли смену; ввести квартальную замену подшипников Ф-3 и обучить второго слесаря.',
+              },
+              keep: {
+                id: 's1-keep',
+                shiftLabel: 'Ночная смена, 20:00–8:00 · Цех металлообработки · Мастер Иван',
+                workshop: 'Цех металлообработки',
+                foreman: 'Иван',
+                planFact: 'План 120 · Факт 109 деталей',
+                deviation: '−9,2% (на границе допуска)',
+                deviationInTolerance: true,
+                downtimeChronology: [
+                  '1:40–3:10 (90 мин) — остановка фрезерного станка Ф-3. Причина: оборудование (заклинил подшипник шпинделя). Ремонт выполнен со складским запасом.',
+                  '3:10–8:00 — работа без переброски персонала, темп остался 9 дет./час.',
+                ],
+                score: 64,
+                scoreVerdict: 'Смена требует разбора резервов',
+                conclusions: [
+                  'Причина недовыполнения — не только станок, но и решение не перебрасывать людей',
+                  'Запас подшипников на складе позволил завершить ремонт без ожидания поставки',
+                ],
+                recommendations: [
+                  'Плановая замена подшипников Ф-3 раз в квартал',
+                  'Обучить второго слесаря этому узлу',
+                  'При простое дольше часа пересматривать расстановку людей',
+                ],
+                formattedSummary:
+                  'СМЕНА Ночная, 20:00–8:00 (Цех металлообработки). План/факт: 120 / 109 дет. Отклонение: −9,2%. Простои: 1:40–3:10, 90 мин, оборудование (шпиндель Ф-3). Балл смены: 64. Выводы и рекомендации: недовыполнение вызвано и отказом от переброски людей; плановая замена подшипников Ф-3, обучение второго слесаря, пересмотр расстановки при простое > 60 мин.',
+              },
+            },
+          },
+          {
+            id: 'scenario-2',
+            number: 2,
+            title: 'Сборочный цех: задержали комплектующие',
+            workshop: 'Сборочный цех',
+            stepsCount: 5,
+            cardSummary:
+              'Сценарий 2 · Сборочный цех · 5 шагов. Склад задержал комплектующие — линия встала',
+            foremanName: 'Ольга',
+            foremanRole: 'Ольга, мастер дневной смены сборочного цеха',
+            shiftWindow: 'Дневная смена · 8:00–20:00',
+            launchCommand: 'Начать смену: сборочный цех, план 200 узлов, мастер Ольга',
+            steps: [
+              {
+                stepNumber: 1,
+                agentId: 'planner',
+                systemPrompt:
+                  'Дневная смена, 8:00–20:00. План: 200 узлов гидроусилителя. Критично: первые 50 узлов к 12:00 — их ждёт главный конвейер. Принимаете?',
+                options: [
+                  {
+                    id: 's2-1-main',
+                    text: 'Принимаю, комплектующие со склада заказаны.',
+                    isPrimary: true,
+                    systemResponse: 'Задание закреплено. Сбор факта — каждые два часа.',
+                  },
+                  {
+                    id: 's2-1-alt1',
+                    text: 'Прошлый раз подшипники привезли с опозданием.',
+                    isPrimary: false,
+                    returnsToButtons: true,
+                    systemResponse:
+                      'Помню: 14-го был простой 25 минут по той же причине. Склад подтвердил резерв на сегодня. Принимаем задание?',
+                    updatedPanelFields: [
+                      { key: 'plan', label: 'План', value: '200 узлов', tone: 'neutral' },
+                      { key: 'critical', label: 'Критично', value: '50 шт. к 12:00', tone: 'warning' },
+                      {
+                        key: 'norm',
+                        label: 'Норма',
+                        value: '~17 узлов/час (резерв подтверждён)',
+                        tone: 'warning',
+                      },
+                    ],
+                    updatedReasoning: {
+                      agentName: 'Планировщик',
+                      receivedInput:
+                        'Замечание мастера Ольги о прошлом срыве поставки подшипников 14-го числа.',
+                      decisionLogic:
+                        'История инцидента (простой 25 мин) учтена в журнале рисков, проверено подтверждение резерва на складе. Ожидается принятие задания.',
+                      handoffPayload: {
+                        workshop: 'Сборочный цех',
+                        plan: '200 узлов (~17 узл./час)',
+                        fact: 'Смена не стартовала',
+                        deviation: '0%',
+                        downtimeMinutes: '0 мин',
+                        classifierReason: 'Риск по поставке отмечен',
+                      },
+                    },
+                  },
+                  {
+                    id: 's2-1-alt2',
+                    text: 'А если конвейер не заберёт 50 к обеду?',
+                    isPrimary: false,
+                    returnsToButtons: true,
+                    systemResponse: 'Конвейер подтвердил окно 12:00. Риск записан в журнал.',
+                    updatedReasoning: {
+                      agentName: 'Планировщик',
+                      receivedInput:
+                        'Уточнение мастера по окну отгрузки на главный конвейер к 12:00.',
+                      decisionLogic:
+                        'Проверено окно приёмки главного конвейера (12:00), риск буферизации записан в журнал смены. Ожидается подтверждение задания.',
+                      handoffPayload: {
+                        workshop: 'Сборочный цех',
+                        plan: '200 узлов (~17 узл./час)',
+                        fact: 'Смена не стартовала',
+                        deviation: '0%',
+                        downtimeMinutes: '0 мин',
+                        classifierReason: 'Окно 12:00 подтверждено',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  { key: 'plan', label: 'План', value: '200 узлов', tone: 'neutral' },
+                  { key: 'critical', label: 'Критично', value: '50 шт. к 12:00', tone: 'warning' },
+                  { key: 'norm', label: 'Норма', value: '~17 узлов/час', tone: 'neutral' },
+                ],
+                reasoning: {
+                  agentName: 'Планировщик',
+                  receivedInput:
+                    'Команда запуска: сборочный цех, план 200 узлов гидроусилителя, 8:00–20:00, мастер Ольга.',
+                  decisionLogic:
+                    'Сформирован сменный график (~17 узлов/час), зафиксирован критический рубеж: 50 узлов к 12:00 для главного конвейера.',
+                  handoffPayload: {
+                    workshop: 'Сборочный цех',
+                    plan: '200 узлов',
+                    fact: '0 узлов (старт)',
+                    deviation: '0%',
+                    downtimeMinutes: '0 мин',
+                    classifierReason: 'Не применимо',
+                  },
+                },
+              },
+              {
+                stepNumber: 2,
+                agentId: 'collector',
+                systemPrompt: '10:00. По графику 34 узла. Факт?',
+                options: [
+                  {
+                    id: 's2-2-main',
+                    text: '36 узлов, идём с опережением.',
+                    isPrimary: true,
+                    systemResponse:
+                      'Принято: 36 из 34 (+6%). Хороший запас к критичной отметке 12:00.',
+                  },
+                  {
+                    id: 's2-2-alt1',
+                    text: 'Не до подсчётов, потом скажу.',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse:
+                      'Без цифр диспетчер слеп. Мастер вернулась с данными: 36. Фиксирую.',
+                    updatedReasoning: {
+                      agentName: 'Сборщик',
+                      receivedInput: 'Отказ от немедленного подсчёта на срезе 10:00.',
+                      decisionLogic:
+                        'Повторный запрос без допуска «вслепую». После уточнения получена точная выработка: 36 узлов (+6% к графику 34).',
+                      handoffPayload: {
+                        workshop: 'Сборочный цех',
+                        plan: '34 узла к 10:00',
+                        fact: '36 узлов',
+                        deviation: '+6%',
+                        downtimeMinutes: '0 мин',
+                        classifierReason: 'Опережение графика',
+                      },
+                    },
+                  },
+                  {
+                    id: 's2-2-alt2',
+                    text: 'Нормально всё.',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse: 'В отчёт пойдёт цифра, а не «нормально». Уточнено: 36.',
+                    updatedReasoning: {
+                      agentName: 'Сборщик',
+                      receivedInput: 'Размытый ответ мастера («нормально всё»).',
+                      decisionLogic:
+                        'Качественные оценки без числа отклоняются. Запрошен счёт готовых узлов: зафиксировано 36 шт. (+6% к плану 34).',
+                      handoffPayload: {
+                        workshop: 'Сборочный цех',
+                        plan: '34 узла к 10:00',
+                        fact: '36 узлов',
+                        deviation: '+6%',
+                        downtimeMinutes: '0 мин',
+                        classifierReason: 'Опережение графика',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  { key: 'fact', label: 'Факт 10:00', value: '36', tone: 'nominal' },
+                  { key: 'plan', label: 'План 10:00', value: '34', tone: 'neutral' },
+                  { key: 'status', label: 'Статус', value: 'опережение', tone: 'nominal' },
+                ],
+                reasoning: {
+                  agentName: 'Сборщик',
+                  receivedInput: 'Контрольный час 10:00, плановый рубеж 34 узла.',
+                  decisionLogic:
+                    'Получена точная цифра 36 узлов (+6%). Создан задел перед отгрузкой 50 узлов к 12:00.',
+                  handoffPayload: {
+                    workshop: 'Сборочный цех',
+                    plan: '34 узла к 10:00',
+                    fact: '36 узлов',
+                    deviation: '+6%',
+                    downtimeMinutes: '0 мин',
+                    classifierReason: 'В допуске (опережение)',
+                  },
+                },
+              },
+              {
+                stepNumber: 3,
+                agentId: 'controller',
+                systemPrompt:
+                  '12:30. Критичную партию — 50 узлов — конвейеру выдали в срок. Но сигнал: линия стоит уже 20 минут, кончились подшипники Н-12. Отклонение нарастает: −12% к 13:00. Что случилось?',
+                options: [
+                  {
+                    id: 's2-3-main',
+                    text: 'Склад не привёз подшипники, машина ушла за ними час назад.',
+                    isPrimary: true,
+                    systemResponse:
+                      'Принято. Детектив открыл карту простоя: линия сборки, 12:10, причина — комплектующие.',
+                  },
+                  {
+                    id: 's2-3-alt1',
+                    text: 'Опять склад барахлит!',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse:
+                      'Эмоции понятны, но в карту пойдёт факт: подшипник Н-12 не доставлен, машина в пути. Записано.',
+                    updatedReasoning: {
+                      agentName: 'Контролёр отклонений',
+                      receivedInput:
+                        'Сигнал простоя с 12:10 (прогнозируемое отклонение −12% > допуска −10%).',
+                      decisionLogic:
+                        'Отфильтрована эмоциональная оценка, зафиксирован конкретный дефицит (подшипник Н-12, машина в пути). Инициирована карта простоя.',
+                      handoffPayload: {
+                        workshop: 'Сборочный цех',
+                        plan: '85 узлов к 13:00',
+                        fact: 'Отклонение −12%',
+                        deviation: '−12% (вне допуска)',
+                        downtimeMinutes: 'Старт 12:10',
+                        classifierReason: 'Материалы / комплектующие (Н-12)',
+                      },
+                    },
+                  },
+                  {
+                    id: 's2-3-alt2',
+                    text: 'Не знаю, линия просто встала.',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse:
+                      'Детектив уточнил на складе: Н-12 не привезли, машина ушла в 11:30. Записано.',
+                    updatedReasoning: {
+                      agentName: 'Контролёр отклонений',
+                      receivedInput:
+                        'Отклонение −12%, мастер не назвал причину остановки линии в 12:10.',
+                      decisionLogic:
+                        'По правилу «никаких дыр без причины» запрошены данные склада: не доставлен подшипник Н-12 (рейс ушёл в 11:30). Передано Детективу.',
+                      handoffPayload: {
+                        workshop: 'Сборочный цех',
+                        plan: '85 узлов к 13:00',
+                        fact: 'Отклонение −12%',
+                        deviation: '−12% (вне допуска)',
+                        downtimeMinutes: 'Старт 12:10',
+                        classifierReason: 'Материалы / комплектующие (Н-12)',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  { key: 'deviation', label: 'Отклонение', value: '−12%', tone: 'alert' },
+                  { key: 'downtimeStart', label: 'Простой', value: 'с 12:10', tone: 'warning' },
+                  { key: 'reason', label: 'Причина', value: 'комплектующие', tone: 'alert' },
+                ],
+                reasoning: {
+                  agentName: 'Контролёр отклонений',
+                  receivedInput:
+                    'Критичная партия 50 шт. сдана в 12:00. Остановка линии с 12:10 из-за отсутствия Н-12, прогнозный провал −12% к 13:00.',
+                  decisionLogic:
+                    'Отклонение −12% превышает допустимый предел −10%. Активирован разбор причины и передача в Детектив простоев.',
+                  handoffPayload: {
+                    workshop: 'Сборочный цех',
+                    plan: '200 узлов',
+                    fact: 'Простой линии с 12:10',
+                    deviation: '−12% (вне допуска)',
+                    downtimeMinutes: 'Идёт (с 12:10)',
+                    classifierReason: 'Материалы / комплектующие',
+                  },
+                },
+              },
+              {
+                stepNumber: 4,
+                agentId: 'detective',
+                systemPrompt:
+                  'Карта простоя: линия сборки, стоит с 12:10. Длительность и что делала бригада?',
+                options: [
+                  {
+                    id: 's2-4-main',
+                    text: '40 минут: с 12:10 до 12:50. Половину линии переключили на узел Г-9, чтобы люди не стояли.',
+                    isPrimary: true,
+                    systemResponse:
+                      'Простой закрыт: 40 минут, причина — материалы/комплектующие, виновное звено — логистика склада. Действия бригады правильные: перестройка сохранила часть выработки.',
+                  },
+                  {
+                    id: 's2-4-alt1',
+                    text: 'Минут сорок, наверное.',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse: 'По меткам линии — ровно 40 минут. Так и записано.',
+                    updatedReasoning: {
+                      agentName: 'Детектив простоев',
+                      receivedInput:
+                        'Приблизительная оценка длительности от мастера («минут сорок, наверное»).',
+                      decisionLogic:
+                        'Время простоя сверено по журналу пуска/останова линии: 12:10–12:50, ровно 40 минут. Виновное звено — логистика склада.',
+                      handoffPayload: {
+                        workshop: 'Сборочный цех',
+                        plan: '200 узлов',
+                        fact: 'Переналадка линии в 12:50',
+                        deviation: '−12% в моменте',
+                        downtimeMinutes: '40 мин (12:10–12:50)',
+                        classifierReason: 'Материалы / комплектующие (склад)',
+                      },
+                    },
+                  },
+                  {
+                    id: 's2-4-alt2',
+                    text: 'Люди не стояли, это главное.',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse:
+                      'Верно, и это отмечено в карте. Но сам простой фиксируется обязательно.',
+                    updatedReasoning: {
+                      agentName: 'Детектив простоев',
+                      receivedInput:
+                        'Указание мастера на занятость персонала без точной фиксации простоя.',
+                      decisionLogic:
+                        'Переключение части бригады на узел Г-9 отмечено как позитивное действие, но остановка целевой линии длительностью 40 мин (>15 мин) зафиксирована в обязательном порядке.',
+                      handoffPayload: {
+                        workshop: 'Сборочный цех',
+                        plan: '200 узлов',
+                        fact: 'Частичный выпуск Г-9',
+                        deviation: '−12% в моменте',
+                        downtimeMinutes: '40 мин (12:10–12:50)',
+                        classifierReason: 'Материалы / комплектующие (склад)',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  { key: 'downtime', label: 'Простой', value: '40 мин', tone: 'alert' },
+                  { key: 'reason', label: 'Причина', value: 'комплектующие', tone: 'warning' },
+                  { key: 'culprit', label: 'Виновное звено', value: 'склад', tone: 'neutral' },
+                ],
+                reasoning: {
+                  agentName: 'Детектив простоев',
+                  receivedInput: 'Открытая карта простоя линии сборки с 12:10 (отсутствие Н-12).',
+                  decisionLogic:
+                    'Длительность 40 мин (>15 мин). Классификация: «Материалы/комплектующие», ответственное звено — логистика склада. Переключение половины линии на Г-9 зачтено в актив бригаде.',
+                  handoffPayload: {
+                    workshop: 'Сборочный цех',
+                    plan: '200 узлов',
+                    fact: 'Линия запущена в 12:50',
+                    deviation: '−12% на 13:00',
+                    downtimeMinutes: '40 мин',
+                    classifierReason: 'Материалы / комплектующие (Н-12, склад)',
+                  },
+                },
+              },
+              {
+                stepNumber: 5,
+                agentId: 'forecaster',
+                secondaryAgentId: 'report',
+                isFinalStep: true,
+                systemPrompt:
+                  'Подшипники привезли в 12:50. После перестройки темп — 18 узлов в час. Прогноз к 20:00: 195–198 узлов. Продолжаем в том же темпе?',
+                options: [
+                  {
+                    id: 's2-5-main',
+                    text: 'Да, работаем, к вечеру наверстаем почти всё.',
+                    isPrimary: true,
+                    branchKey: 'standard',
+                    systemResponse:
+                      'Смена завершена (20:00). Итог: 196 из 200 узлов (−2%, в допуске). Критичная партия 50 узлов конвейеру выдана в срок. Отчёт сформировал сводку — балл смены: 81.',
+                    updatedPanelFields: [
+                      {
+                        key: 'planFact',
+                        label: 'План / Факт',
+                        value: '200 / 196 узлов',
+                        tone: 'nominal',
+                      },
+                      {
+                        key: 'deviation',
+                        label: 'Отклонение',
+                        value: '−2% (в допуске)',
+                        tone: 'nominal',
+                      },
+                      { key: 'score', label: 'Балл смены', value: '81 / 100', tone: 'nominal' },
+                    ],
+                    updatedReasoning: {
+                      agentName: 'Прогнозист + Отчёт',
+                      receivedInput:
+                        'Подтверждение мастера удерживать темп 18 узл./час до 20:00.',
+                      decisionLogic:
+                        'Прогноз 195–198 подтвердился фактом 196 узлов (−2%, в допуске). Отчёт начислил 81 балл с учётом сдачи критичной партии в 12:00 и перестройки на Г-9.',
+                      handoffPayload: {
+                        workshop: 'Сборочный цех',
+                        plan: '200 узлов',
+                        fact: '196 узлов',
+                        deviation: '−2% (в допуске)',
+                        downtimeMinutes: '40 мин',
+                        classifierReason: 'Материалы / комплектующие (склад)',
+                      },
+                    },
+                  },
+                  {
+                    id: 's2-5-alt1',
+                    text: 'А можно людей добавить?',
+                    isPrimary: false,
+                    returnsToButtons: true,
+                    systemResponse:
+                      'Свободных рук нет — вторая линия на ревизии. Работаем своими.',
+                    updatedReasoning: {
+                      agentName: 'Прогнозист',
+                      receivedInput: 'Запрос мастера Ольги на привлечение резервных сборщиков.',
+                      decisionLogic:
+                        'Проверена загрузка смежных участков: вторая линия на плановой ревизии, свободного резерва нет. Требуется подтверждение работы текущим составом.',
+                      handoffPayload: {
+                        workshop: 'Сборочный цех',
+                        plan: '200 узлов',
+                        fact: 'Прогноз 195–198 узлов',
+                        deviation: 'Ожидаемо −2%',
+                        downtimeMinutes: '40 мин',
+                        classifierReason: 'Материалы / комплектующие',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  {
+                    key: 'forecast',
+                    label: 'Прогноз 20:00',
+                    value: '195–198 узлов',
+                    tone: 'nominal',
+                  },
+                  { key: 'pace', label: 'Темп', value: '18 узлов/час', tone: 'nominal' },
+                  { key: 'critical', label: 'Партия 12:00', value: '50 шт. в срок', tone: 'nominal' },
+                ],
+                reasoning: {
+                  agentName: 'Прогнозист',
+                  receivedInput: 'Возобновление сборки в 12:50, темп вырос до 18 узлов/час.',
+                  decisionLogic:
+                    'Рассчитана итоговая выработка 195–198 узлов к 20:00 (отклонение около −2%, в допуске). Запрошено подтверждение режима до конца смены для передачи в Отчёт.',
+                  handoffPayload: {
+                    workshop: 'Сборочный цех',
+                    plan: '200 узлов',
+                    fact: 'Прогноз 195–198',
+                    deviation: '−2% (ожидаемо)',
+                    downtimeMinutes: '40 мин',
+                    classifierReason: 'Материалы / комплектующие (Н-12)',
+                  },
+                },
+              },
+            ],
+            outcomes: {
+              standard: {
+                id: 's2-standard',
+                shiftLabel: 'Дневная смена, 8:00–20:00 · Сборочный цех · Мастер Ольга',
+                workshop: 'Сборочный цех',
+                foreman: 'Ольга',
+                planFact: 'План 200 · Факт 196 узлов',
+                extraQualityLine: 'Критичная партия 50 узлов конвейеру — выдана в срок',
+                deviation: '−2% (в допуске)',
+                deviationInTolerance: true,
+                downtimeChronology: [
+                  '12:10–12:50 (40 мин) — простой линии сборки. Причина: материалы/комплектующие (не доставлены подшипники Н-12, логистика склада).',
+                  '12:10–12:50 — половина линии переключена на узел Г-9, простой персонала минимизирован.',
+                ],
+                score: 81,
+                scoreVerdict: 'Устойчивая смена при срыве логистики',
+                conclusions: [
+                  'Критичная отметка закрыта несмотря на простой',
+                  'Перестройка на узел Г-9 спасла выработку',
+                ],
+                recommendations: [
+                  'Страховой запас Н-12 на полусмены',
+                  'Сигнал складу — повторный срыв за месяц',
+                ],
+                formattedSummary:
+                  'СМЕНА Дневная, 8:00–20:00 (Сборочный цех). План/факт: 200 / 196 узлов. Отклонение: −2% (в допуске). Простои: 12:10–12:50, 40 мин, комплектующие (Н-12, склад). Балл смены: 81. Выводы и рекомендации: критичная отгрузка в срок, спасла перестройка на Г-9; завести страховой запас Н-12 и передать сигнал складу.',
+              },
+            },
+          },
+          {
+            id: 'scenario-3',
+            number: 3,
+            title: 'Термический цех: план есть, а толку мало',
+            workshop: 'Термический цех',
+            stepsCount: 5,
+            cardSummary:
+              'Сценарий 3 · Термический цех · 5 шагов. План перевыполнен, но лаборатория нашла брак',
+            foremanName: 'Пётр',
+            foremanRole: 'Пётр, мастер дневной смены термического цеха',
+            shiftWindow: 'Дневная смена · Термический цех',
+            launchCommand: 'Начать смену: термический цех, план 300 валов, мастер Пётр',
+            steps: [
+              {
+                stepNumber: 1,
+                agentId: 'planner',
+                systemPrompt:
+                  'Дневная смена. План: 300 закалённых валов. Норма твёрдости — HRC 45–50, лаборатория проверяет каждую вторую партию. Принимаете?',
+                options: [
+                  {
+                    id: 's3-1-main',
+                    text: 'Принимаю, печи разогреты с ночи.',
+                    isPrimary: true,
+                    systemResponse:
+                      'Задание закреплено. Напоминаю: контроль твёрдости — каждая вторая партия.',
+                  },
+                  {
+                    id: 's3-1-alt1',
+                    text: 'Термист вчера жаловался, может не выйти.',
+                    isPrimary: false,
+                    returnsToButtons: true,
+                    systemResponse:
+                      'Сигнал важный: фиксирую риск по кадрам. Замена на сегодня — ученик Семёнов, под вашим контролем.',
+                    updatedPanelFields: [
+                      { key: 'plan', label: 'План', value: '300 валов', tone: 'neutral' },
+                      { key: 'norm', label: 'Норма', value: 'HRC 45–50', tone: 'neutral' },
+                      {
+                        key: 'risk',
+                        label: 'Риск (кадры)',
+                        value: 'ученик Семёнов у печи',
+                        tone: 'warning',
+                      },
+                    ],
+                    updatedReasoning: {
+                      agentName: 'Планировщик',
+                      receivedInput:
+                        'Сообщение мастера Петра о вероятной невыходе основного термиста.',
+                      decisionLogic:
+                        'Риск по кадрам зафиксирован в журнале (замена — ученик Семёнов, усиленный контроль режима). Ожидается подтверждение задания.',
+                      handoffPayload: {
+                        workshop: 'Термический цех',
+                        plan: '300 валов (HRC 45–50)',
+                        fact: 'Смена не стартовала',
+                        deviation: '0%',
+                        downtimeMinutes: '0 мин',
+                        classifierReason: 'Риск по кадрам зафиксирован',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  { key: 'plan', label: 'План', value: '300 валов', tone: 'neutral' },
+                  { key: 'norm', label: 'Норма', value: 'HRC 45–50', tone: 'neutral' },
+                  { key: 'check', label: 'Проверка', value: 'каждая 2-я партия', tone: 'neutral' },
+                ],
+                reasoning: {
+                  agentName: 'Планировщик',
+                  receivedInput:
+                    'Команда запуска: термический цех, план 300 закалённых валов, допуск HRC 45–50, мастер Пётр.',
+                  decisionLogic:
+                    'Закреплён объём и жёсткий допуск качества (лабораторная проверка каждой второй партии). Ожидается принятие смены мастером.',
+                  handoffPayload: {
+                    workshop: 'Термический цех',
+                    plan: '300 валов',
+                    fact: '0 (старт)',
+                    deviation: '0%',
+                    downtimeMinutes: '0 мин',
+                    classifierReason: 'Не применимо',
+                  },
+                },
+              },
+              {
+                stepNumber: 2,
+                agentId: 'collector',
+                systemPrompt: '14:00. По графику 150 валов. Факт?',
+                options: [
+                  {
+                    id: 's3-2-main',
+                    text: '160, идём впереди графика.',
+                    isPrimary: true,
+                    systemResponse:
+                      'Принято: 160 из 150 (+7%). Запас есть — но помним про контроль качества.',
+                  },
+                  {
+                    id: 's3-2-alt1',
+                    text: 'Больше плана, точно больше.',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse: 'Нужна точная цифра. Мастер уточнил: 160. Записано.',
+                    updatedReasoning: {
+                      agentName: 'Сборщик',
+                      receivedInput: 'Ответ мастера без числа («больше плана, точно больше»).',
+                      decisionLogic:
+                        'Размытая формулировка отклонена. После подсчёта партии зафиксировано 160 валов (+7% к плану 150).',
+                      handoffPayload: {
+                        workshop: 'Термический цех',
+                        plan: '150 валов к 14:00',
+                        fact: '160 валов',
+                        deviation: '+7%',
+                        downtimeMinutes: '0 мин',
+                        classifierReason: 'Опережение по количеству',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  { key: 'fact', label: 'Факт 14:00', value: '160', tone: 'nominal' },
+                  { key: 'plan', label: 'План 14:00', value: '150', tone: 'neutral' },
+                  { key: 'status', label: 'Статус', value: 'опережение', tone: 'nominal' },
+                ],
+                reasoning: {
+                  agentName: 'Сборщик',
+                  receivedInput: 'Срез 14:00: плановый объём 150 валов.',
+                  decisionLogic:
+                    'Зафиксирована точная выработка 160 валов (+7%). Передано Контролёру с пометкой ожидания результатов лабораторного замера HRC.',
+                  handoffPayload: {
+                    workshop: 'Термический цех',
+                    plan: '150 валов к 14:00',
+                    fact: '160 валов',
+                    deviation: '+7%',
+                    downtimeMinutes: '0 мин',
+                    classifierReason: 'Ожидание пробы лаборатории',
+                  },
+                },
+              },
+              {
+                stepNumber: 3,
+                agentId: 'controller',
+                systemPrompt:
+                  '17:00. По количеству всё отлично: 260 при плане 225 (+15%). Но сигнал от лаборатории: в партии 14:00–16:00 двенадцать валов не прошли по твёрдости — ниже HRC 45. Что случилось?',
+                options: [
+                  {
+                    id: 's3-3-main',
+                    text: 'Термист не вышел, за ним ученик — видимо, режим печи сбил.',
+                    isPrimary: true,
+                    systemResponse:
+                      'Принято. Детектив открыл карту инцидента: брак 12 штук, причина уточняется. Напоминаю: зачтётся только годное — количество без качества не результат.',
+                  },
+                  {
+                    id: 's3-3-alt1',
+                    text: 'Лаборатория ошиблась, наверное.',
+                    isPrimary: false,
+                    returnsToButtons: true,
+                    systemResponse:
+                      'Перепроверка сделана дважды — брак подтверждён: 12 штук. Разбираем причину.',
+                    updatedReasoning: {
+                      agentName: 'Контролёр отклонений',
+                      receivedInput: 'Сомнение мастера в замерах лаборатории по партии 14:00–16:00.',
+                      decisionLogic:
+                        'Учтено повторное испытание лаборатории: несоответствие (< HRC 45) подтверждено дважды для 12 валов. Необходима причина отклонения режима.',
+                      handoffPayload: {
+                        workshop: 'Термический цех',
+                        plan: '225 валов к 17:00',
+                        fact: '260 валов (12 брак)',
+                        deviation: '+15% вал / брак 12 шт.',
+                        downtimeMinutes: 'Уточняется',
+                        classifierReason: 'Качество / брак (подтверждён)',
+                      },
+                    },
+                  },
+                  {
+                    id: 's3-3-alt2',
+                    text: 'А может, норма завышена?',
+                    isPrimary: false,
+                    returnsToButtons: true,
+                    systemResponse:
+                      'HRC 45–50 — из техкарты детали, обсуждению не подлежит. Разбираем причину.',
+                    updatedReasoning: {
+                      agentName: 'Контролёр отклонений',
+                      receivedInput: 'Попытка оспорить норматив твёрдости HRC 45–50.',
+                      decisionLogic:
+                        'Норма HRC 45–50 закреплена в техкарте и изменению не подлежит. Продолжен запрос причины брака.',
+                      handoffPayload: {
+                        workshop: 'Термический цех',
+                        plan: '225 валов к 17:00',
+                        fact: '260 валов (12 брак)',
+                        deviation: '+15% вал / брак 12 шт.',
+                        downtimeMinutes: 'Уточняется',
+                        classifierReason: 'Качество / брак',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  { key: 'scrap', label: 'Брак', value: '12 шт.', tone: 'alert' },
+                  { key: 'quantity', label: 'По количеству', value: '+15%', tone: 'nominal' },
+                  { key: 'hardness', label: 'Твёрдость', value: 'ниже HRC 45', tone: 'alert' },
+                ],
+                reasoning: {
+                  agentName: 'Контролёр отклонений',
+                  receivedInput:
+                    'Выработка на 17:00 = 260 шт. (+15% к плану 225), протокол лаборатории: 12 валов < HRC 45.',
+                  decisionLogic:
+                    'Несмотря на перевыполнение по штукам (+15%), сработал сигнал качества (12 бракованных деталей исключаются из зачёта). Запущен разбор причины.',
+                  handoffPayload: {
+                    workshop: 'Термический цех',
+                    plan: '225 валов к 17:00',
+                    fact: '260 шт. (из них 12 брак)',
+                    deviation: 'Сигнал качества',
+                    downtimeMinutes: 'Карта открыта',
+                    classifierReason: 'Качество / брак',
+                  },
+                },
+              },
+              {
+                stepNumber: 4,
+                agentId: 'detective',
+                systemPrompt:
+                  'Карта инцидента: 12 валов брака, партия 14:00–16:00. Что было с печью и кто вёл процесс?',
+                options: [
+                  {
+                    id: 's3-4-main',
+                    text: 'Ученик поставил 820° вместо 860°, заметили по журналу. Переналадка заняла 25 минут.',
+                    isPrimary: true,
+                    systemResponse:
+                      'Зафиксировано: причина — кадры (оператор без допуска) + качество/брак. Простой переналадки — 25 минут. Режим восстановлен, следующая партия контроль прошла.',
+                  },
+                  {
+                    id: 's3-4-alt1',
+                    text: 'Молодой ещё, ошибся.',
+                    isPrimary: false,
+                    returnsToButtons: false,
+                    systemResponse:
+                      'Так и записано, только точнее: режим 820° вместо 860°, переналадка 25 минут.',
+                    updatedReasoning: {
+                      agentName: 'Детектив простоев',
+                      receivedInput: 'Общее объяснение мастера («молодой ещё, ошибся»).',
+                      decisionLogic:
+                        'Из журнала термообработки извлечены точные параметры: уставка 820°C вместо 860°C, простой переналадки 25 минут (>15 мин). Причины: «Кадры» + «Качество/брак».',
+                      handoffPayload: {
+                        workshop: 'Термический цех',
+                        plan: '300 валов',
+                        fact: 'Режим 860°C восстановлен',
+                        deviation: 'Брак 12 шт. (+ проверка смежной)',
+                        downtimeMinutes: '25 мин (переналадка)',
+                        classifierReason: 'Кадры + качество/брак',
+                      },
+                    },
+                  },
+                ],
+                panelFields: [
+                  { key: 'reason', label: 'Причина', value: 'кадры + брак', tone: 'alert' },
+                  { key: 'downtime', label: 'Переналадка', value: '25 мин', tone: 'warning' },
+                  { key: 'mode', label: 'Режим', value: 'восстановлен', tone: 'nominal' },
+                ],
+                reasoning: {
+                  agentName: 'Детектив простоев',
+                  receivedInput:
+                    'Инцидент по качеству: 12 валов < HRC 45, сменный журнал печи, простой на вывод на режим 25 мин.',
+                  decisionLogic:
+                    'Классифицированы две связанные причины: «Кадры» (оператор без допуска поставил 820°C вместо 860°C) и «Качество/брак». Простой 25 мин зафиксирован.',
+                  handoffPayload: {
+                    workshop: 'Термический цех',
+                    plan: '300 валов',
+                    fact: 'Инцидент закрыт',
+                    deviation: 'Перепроверка смежной партии',
+                    downtimeMinutes: '25 мин',
+                    classifierReason: 'Кадры + качество/брак',
+                  },
+                },
+              },
+              {
+                stepNumber: 5,
+                agentId: 'report',
+                isFinalStep: true,
+                systemPrompt:
+                  'Конец смены. Сделано 305 валов, но с учётом перепроверки смежной партии брак составил 18 штук (12 + 6). Зачтено только годное: 287 при плане 300 (−4,3%). Балл смены: 70 из 100.',
+                options: [],
+                panelFields: [
+                  { key: 'credited', label: 'Зачтено годных', value: '287 / 300', tone: 'warning' },
+                  { key: 'scrap', label: 'Брак итого', value: '18 шт. (12 + 6)', tone: 'alert' },
+                  { key: 'score', label: 'Балл смены', value: '70 / 100', tone: 'warning' },
+                ],
+                reasoning: {
+                  agentName: 'Отчёт',
+                  receivedInput:
+                    'Сделано 305 валов, лабораторная перепроверка смежной партии выявила ещё 6 шт. брака (всего 18 шт.), простой 25 мин.',
+                  decisionLogic:
+                    'По правилу «зачёт только по годному» принято 287 валов (−4,3% к плану 300). Балл смены 70/100: перевыполнение по валу не перекрыло потери от допуска ученика без контроля.',
+                  handoffPayload: {
+                    workshop: 'Термический цех',
+                    plan: '300 валов',
+                    fact: '287 годных (сделано 305, брак 18)',
+                    deviation: '−4,3% по годному',
+                    downtimeMinutes: '25 мин',
+                    classifierReason: 'Кадры (без допуска) + качество/брак',
+                  },
+                },
+              },
+            ],
+            outcomes: {
+              standard: {
+                id: 's3-standard',
+                shiftLabel: 'Дневная смена · Термический цех · Мастер Пётр',
+                workshop: 'Термический цех',
+                foreman: 'Пётр',
+                planFact: 'План 300 · Сделано 305 · Зачтено годных: 287',
+                extraQualityLine:
+                  'Брак: 18 валов (12 в партии 14:00–16:00 + 6 при перепроверке смежной)',
+                deviation: '−4,3% по годному (количество без качества не зачтено)',
+                deviationInTolerance: true,
+                downtimeChronology: [
+                  '14:00–16:00 — нарушение температурного режима печи (820°C вместо 860°C), причина: кадры (ученик без допуска) + качество/брак.',
+                  'Переналадка и вывод печи на режим — 25 минут простоя. Следующая партия контроль прошла.',
+                ],
+                score: 70,
+                scoreVerdict: 'План по количеству не зачтён из-за брака',
+                conclusions: [
+                  'По количеству план перевыполнен (305), по результату — нет (287 годных)',
+                  'Причина — оператор без допуска у печи',
+                ],
+                recommendations: [
+                  'Двойной контроль режима печи при замене термиста',
+                  'Допуск ученика к печи только с наставником',
+                ],
+                formattedSummary:
+                  'СМЕНА Дневная (Термический цех). План/факт: 300 / 287 годных (сделано 305, брак 18). Отклонение: −4,3% по годному. Простои: 25 мин переналадка печи, кадры (оператор без допуска) + качество/брак. Балл смены: 70. Выводы и рекомендации: двойной контроль режима при замене термиста, допуск ученика только с наставником.',
+              },
+            },
+          },
+        ];
+
+        // ============================================================
+        // 3. SVG ICONS (MATCHING LUCIDE-REACT EXACTLY)
+        // ============================================================
+        const ICONS = {
+          arrowRight: (cls) =>
+            `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`,
+          check: (cls) =>
+            `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`,
+          chevronDown: (cls) =>
+            `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`,
+          chevronUp: (cls) =>
+            `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>`,
+          send: (cls) =>
+            `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>`,
+          x: (cls) =>
+            `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
+          rotateCcw: (cls) =>
+            `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`,
+          checkCircle2: (cls) =>
+            `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>`,
+        };
+
+        // ============================================================
+        // 4. APPLICATION STATE & HELPERS
+        // ============================================================
+        const state = {
+          mode: 'home', // 'home' | 'simulation' | 'outcome'
+          activeScenarioId: 'scenario-1',
+          initialStepIndex: 0,
+          outcomeKey: 'reallocate',
+          hasDismissedHint: false,
+
+          // Simulation state
+          currentStepIdx: 0,
+          messages: [],
+          isTyping: false,
+          typingAgentName: 'Планировщик',
+          askedOptionIds: [],
+          isTransitioning: false,
+          selectedBranch: 'reallocate',
+          isShiftFinished: false,
+          allAgentsDone: false,
+          panelFields: [],
+          changedFieldKeys: [],
+          prevFieldMap: {},
+          activeReasoning: null,
+          stepLogs: [],
+          selectedLogStep: 1,
+          isJournalOpen: false,
+          mobileTab: 'dialogue',
+          hasUnreadAgentUpdate: false,
+          arbitraryInput: '',
+          prevActiveConveyorIdx: 0,
+
+          // Outcome state
+          showScenarioPicker: false,
+        };
+
+        let activeTimers = [];
+        let scoreRafId = 0;
+
+        function clearTimers() {
+          activeTimers.forEach((id) => window.clearTimeout(id));
+          activeTimers = [];
+          if (scoreRafId) {
+            cancelAnimationFrame(scoreRafId);
+            scoreRafId = 0;
+          }
+        }
+
+        function prefersReducedMotion() {
+          return (
+            typeof window !== 'undefined' &&
+            window.matchMedia &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          );
+        }
+
+        function schedule(fn, ms) {
+          const id = window.setTimeout(fn, prefersReducedMotion() ? 30 : ms);
+          activeTimers.push(id);
+        }
+
+        function escapeHtml(str) {
+          return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        }
+
+        function getActiveScenario() {
+          return SCENARIOS.find((s) => s.id === state.activeScenarioId) || SCENARIOS[0];
+        }
+
+        function getActiveOutcome() {
+          const sc = getActiveScenario();
+          return sc.outcomes[state.outcomeKey] || Object.values(sc.outcomes)[0];
+        }
+
+        // ============================================================
+        // 5. ACTIONS
+        // ============================================================
+        function goHome() {
+          clearTimers();
+          state.mode = 'home';
+          state.showScenarioPicker = false;
+          renderApp();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function startScenario(scenarioId, stepIdx = 0) {
+          clearTimers();
+          state.activeScenarioId = scenarioId;
+          state.initialStepIndex = stepIdx;
+          state.mode = 'simulation';
+
+          const sc = getActiveScenario();
+          const startStep = sc.steps[stepIdx];
+          const startAgent = AGENTS.find((a) => a.id === startStep.agentId);
+
+          state.currentStepIdx = stepIdx;
+          state.askedOptionIds = [];
+          state.isTransitioning = false;
+          state.selectedBranch = sc.id === 'scenario-1' ? 'reallocate' : 'standard';
+          state.isShiftFinished = false;
+          state.allAgentsDone = false;
+          state.messages = [];
+          state.isTyping = true;
+          state.typingAgentName = startAgent ? startAgent.name : 'Планировщик';
+          state.panelFields = startStep.panelFields.map((f) => ({ ...f }));
+          state.changedFieldKeys = startStep.panelFields.map((f) => f.key);
+          state.activeReasoning = startStep.reasoning;
+          state.stepLogs = [
+            {
+              stepNumber: startStep.stepNumber,
+              agentId: startStep.agentId,
+              reasoning: startStep.reasoning,
+            },
+          ];
+          state.selectedLogStep = startStep.stepNumber;
+          state.isJournalOpen = false;
+          state.mobileTab = 'dialogue';
+          state.hasUnreadAgentUpdate = false;
+          state.arbitraryInput = '';
+          state.prevActiveConveyorIdx = Math.max(
+            0,
+            AGENTS.findIndex((a) => a.id === startStep.agentId)
+          );
+
+          const map = {};
+          startStep.panelFields.forEach((f) => {
+            map[f.key] = f.value;
+          });
+          state.prevFieldMap = map;
+
+          renderApp();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+
+          schedule(() => {
+            state.isTyping = false;
+            state.messages = [
+              {
+                id: `init-${sc.id}-${startStep.stepNumber}`,
+                sender: 'system',
+                agentId: startStep.agentId,
+                agentName: startAgent ? startAgent.name : 'Планировщик',
+                text: startStep.systemPrompt,
+                animateIn: true,
+              },
+            ];
+            if (startStep.isFinalStep && startStep.options.length === 0) {
+              state.isShiftFinished = true;
+              state.allAgentsDone = true;
+            }
+            updateSimulationDOM();
+          }, 480);
+        }
+
+        function applyPanelUpdate(nextFields) {
+          const changed = [];
+          const nextMap = {};
+
+          nextFields.forEach((f) => {
+            nextMap[f.key] = f.value;
+            if (state.prevFieldMap[f.key] !== f.value) {
+              changed.push(f.key);
+            }
+          });
+
+          if (changed.length === 0) {
+            nextFields.forEach((f) => changed.push(f.key));
+          }
+
+          state.prevFieldMap = nextMap;
+          state.panelFields = nextFields.map((f) => ({ ...f }));
+          state.changedFieldKeys = changed;
+          if (state.mobileTab === 'dialogue') {
+            state.hasUnreadAgentUpdate = true;
+          }
+
+          schedule(() => {
+            state.changedFieldKeys = [];
+            const flashEls = document.querySelectorAll('.animate-field-flash');
+            flashEls.forEach((el) => el.classList.remove('animate-field-flash'));
+          }, 1800);
+        }
+
+        function upsertStepLog(entry) {
+          const idx = state.stepLogs.findIndex((e) => e.stepNumber === entry.stepNumber);
+          if (idx >= 0) {
+            state.stepLogs[idx] = entry;
+          } else {
+            state.stepLogs.push(entry);
+          }
+          state.selectedLogStep = entry.stepNumber;
+        }
+
+        function handleOptionClick(optionId) {
+          const sc = getActiveScenario();
+          const currentStep = sc.steps[state.currentStepIdx];
+          const option = currentStep.options.find((o) => o.id === optionId);
+          if (!option || state.isTransitioning || state.isTyping || state.isShiftFinished) {
+            return;
+          }
+
+          state.hasDismissedHint = true;
+          state.isTransitioning = true;
+
+          const activeAgent = AGENTS.find((a) => a.id === currentStep.agentId);
+          const branchUsed = option.branchKey || state.selectedBranch;
+          if (option.branchKey) {
+            state.selectedBranch = option.branchKey;
+          }
+
+          state.messages.push({
+            id: `u-${Date.now()}-${option.id}`,
+            sender: 'master',
+            text: option.text,
+            animateIn: true,
+          });
+          state.typingAgentName = activeAgent ? activeAgent.name : 'Диспетчер';
+          state.isTyping = true;
+          updateSimulationDOM();
+
+          schedule(() => {
+            state.isTyping = false;
+            // clear animateIn flag on older messages so they don't replay
+            state.messages.forEach((m) => {
+              m.animateIn = false;
+            });
+
+            state.messages.push({
+              id: `s-${Date.now()}-${option.id}`,
+              sender: 'system',
+              agentId: currentStep.agentId,
+              agentName: activeAgent ? activeAgent.name : 'Диспетчер',
+              text: option.systemResponse,
+              isComment: Boolean(option.returnsToButtons),
+              animateIn: true,
+            });
+
+            if (option.updatedPanelFields) {
+              applyPanelUpdate(option.updatedPanelFields);
+            }
+
+            if (option.updatedReasoning) {
+              state.activeReasoning = option.updatedReasoning;
+              upsertStepLog({
+                stepNumber: currentStep.stepNumber,
+                agentId: currentStep.agentId,
+                reasoning: option.updatedReasoning,
+              });
+            }
+
+            if (option.returnsToButtons) {
+              state.askedOptionIds.push(option.id);
+              state.isTransitioning = false;
+              updateSimulationDOM();
+              return;
+            }
+
+            if (currentStep.isFinalStep) {
+              state.allAgentsDone = true;
+              state.isShiftFinished = true;
+              state.isTransitioning = false;
+              updateSimulationDOM();
+              return;
+            }
+
+            updateSimulationDOM();
+
+            const nextIdx = state.currentStepIdx + 1;
+            if (nextIdx < sc.steps.length) {
+              const nextStep = sc.steps[nextIdx];
+              const nextAgent = AGENTS.find((a) => a.id === nextStep.agentId);
+
+              schedule(() => {
+                state.typingAgentName = nextAgent ? nextAgent.name : 'Диспетчер';
+                state.isTyping = true;
+                updateSimulationDOM();
+
+                schedule(() => {
+                  state.isTyping = false;
+                  state.messages.forEach((m) => {
+                    m.animateIn = false;
+                  });
+
+                  const prevAgentId = sc.steps[state.currentStepIdx].agentId;
+                  state.prevActiveConveyorIdx = Math.max(
+                    0,
+                    AGENTS.findIndex((a) => a.id === prevAgentId)
+                  );
+                  state.currentStepIdx = nextIdx;
+                  state.askedOptionIds = [];
+
+                  const override =
+                    nextStep.branchOverrides && branchUsed
+                      ? nextStep.branchOverrides[branchUsed]
+                      : undefined;
+
+                  const promptText = override ? override.systemPrompt : nextStep.systemPrompt;
+                  const nextPanel = override ? override.panelFields : nextStep.panelFields;
+                  const nextReasoning = override ? override.reasoning : nextStep.reasoning;
+
+                  applyPanelUpdate(nextPanel);
+                  state.activeReasoning = nextReasoning;
+                  upsertStepLog({
+                    stepNumber: nextStep.stepNumber,
+                    agentId: nextStep.agentId,
+                    reasoning: nextReasoning,
+                  });
+
+                  state.messages.push({
+                    id: `step-${nextStep.stepNumber}-${Date.now()}`,
+                    sender: 'system',
+                    agentId: nextStep.agentId,
+                    agentName: nextAgent ? nextAgent.name : 'Диспетчер',
+                    text: promptText,
+                    animateIn: true,
+                  });
+
+                  if (nextStep.isFinalStep && nextStep.options.length === 0) {
+                    state.allAgentsDone = true;
+                    state.isShiftFinished = true;
+                  }
+
+                  state.isTransitioning = false;
+                  updateSimulationDOM();
+                }, 500);
+              }, 620);
+            } else {
+              state.allAgentsDone = true;
+              state.isShiftFinished = true;
+              state.isTransitioning = false;
+              updateSimulationDOM();
+            }
+          }, 460);
+        }
+
+        function handleArbitrarySubmit(text) {
+          const trimmed = text.trim();
+          if (!trimmed || state.isTransitioning) return;
+
+          state.hasDismissedHint = true;
+          state.arbitraryInput = '';
+          state.isTransitioning = true;
+
+          state.messages.forEach((m) => {
+            m.animateIn = false;
+          });
+          state.messages.push({
+            id: `arb-u-${Date.now()}`,
+            sender: 'master',
+            text: trimmed,
+            animateIn: true,
+          });
+          state.typingAgentName = 'Система';
+          state.isTyping = true;
+          updateSimulationDOM();
+
+          schedule(() => {
+            state.isTyping = false;
+            state.messages.forEach((m) => {
+              m.animateIn = false;
+            });
+            state.messages.push({
+              id: `arb-s-${Date.now()}`,
+              sender: 'system',
+              agentName: 'Диспетчер смены',
+              text: 'Это демо-стенд: здесь показан сценарий работы системы. Выберите один из примеров',
+              isArbitraryFallback: true,
+              animateIn: true,
+            });
+            state.isTransitioning = false;
+            updateSimulationDOM();
+          }, 360);
+        }
+
+        function completeShift() {
+          clearTimers();
+          state.outcomeKey = state.selectedBranch;
+          state.mode = 'outcome';
+          state.showScenarioPicker = false;
+          renderApp();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ============================================================
+        // 6. COMPONENT HTML BUILDERS
+        // ============================================================
+        function renderTopBar() {
+          const mode = state.mode;
+          const activeId = mode === 'home' ? null : state.activeScenarioId;
+
+          const navHtml =
+            mode === 'home'
+              ? `
+              <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
+                <button type="button" data-action="scroll" data-target="scenarios" class="cursor-pointer transition-colors hover:text-[#1B3A6B] whitespace-nowrap shrink-0">Сценарии</button>
+                <button type="button" data-action="scroll" data-target="architecture" class="cursor-pointer transition-colors hover:text-[#1B3A6B] whitespace-nowrap shrink-0">6 агентов</button>
+                <button type="button" data-action="scroll" data-target="rules" class="cursor-pointer transition-colors hover:text-[#1B3A6B] whitespace-nowrap shrink-0">Правила и формат</button>
+              </nav>`
+              : `
+              <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
+                <button type="button" data-action="start-scenario" data-scenario="scenario-1" class="cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
+                  activeId === 'scenario-1'
+                    ? 'font-semibold text-[#1B3A6B] underline decoration-2 underline-offset-8'
+                    : 'hover:text-[#1B3A6B]'
+                }">Металлообработка</button>
+                <button type="button" data-action="start-scenario" data-scenario="scenario-2" class="cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
+                  activeId === 'scenario-2'
+                    ? 'font-semibold text-[#1B3A6B] underline decoration-2 underline-offset-8'
+                    : 'hover:text-[#1B3A6B]'
+                }">Сборочный цех</button>
+                <button type="button" data-action="start-scenario" data-scenario="scenario-3" class="cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
+                  activeId === 'scenario-3'
+                    ? 'font-semibold text-[#1B3A6B] underline decoration-2 underline-offset-8'
+                    : 'hover:text-[#1B3A6B]'
+                }">Термический цех</button>
+              </nav>`;
+
+          const ctaHtml =
+            mode === 'home'
+              ? `<button type="button" data-action="start-scenario" data-scenario="scenario-1" class="cursor-pointer rounded-lg bg-[#1B3A6B] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#142D54] whitespace-nowrap shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B3A6B]">Смотреть пример</button>`
+              : `<button type="button" data-action="go-home" class="cursor-pointer rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50 whitespace-nowrap shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B3A6B]">На главную</button>`;
+
+          return `
+            <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-sm">
+              <div class="mx-auto flex max-w-6xl items-center justify-between gap-8 px-4 py-3.5 sm:px-6">
+                <button type="button" data-action="go-home" class="font-display cursor-pointer text-lg font-bold tracking-tight text-[#1B3A6B] whitespace-nowrap shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1B3A6B]">
+                  Диспетчер смены
+                </button>
+                ${navHtml}
+                <div class="flex items-center shrink-0">${ctaHtml}</div>
+              </div>
+            </header>
+          `;
+        }
+
+        function renderConveyor({ mode, activeAgentId, secondaryAgentId, allCompleted }) {
+          const activeIndex = activeAgentId
+            ? AGENTS.findIndex((a) => a.id === activeAgentId)
+            : -1;
+          const progressRatio = allCompleted
+            ? 1
+            : activeIndex >= 0
+              ? activeIndex / (AGENTS.length - 1)
+              : 0;
+
+          const startDotPct =
+            Math.max(0, state.prevActiveConveyorIdx) * (100 / (AGENTS.length - 1));
+          const targetDotPct = Math.max(0, activeIndex) * (100 / (AGENTS.length - 1));
+
+          const desktopTrackHtml =
+            mode === 'hero'
+              ? `<div class="animate-hero-signal absolute top-1/2 -translate-y-1/2 h-2.5 w-2.5 rounded-full bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.9)]"></div>`
+              : `
+                <div class="h-full bg-sky-300 transition-transform duration-500 ease-out" style="transform: scaleX(${progressRatio}); transform-origin: left center;"></div>
+                ${
+                  !allCompleted && activeIndex >= 0
+                    ? `<div id="progress-signal-dot" data-target-left="${targetDotPct}%" class="absolute top-1/2 -translate-y-1/2 h-2.5 w-2.5 rounded-full bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.85)] transition-all duration-500 ease-out" style="left: ${startDotPct}%;"></div>`
+                    : ''
+                }
+              `;
+
+          const desktopNodesHtml = AGENTS.map((agent, idx) => {
+            const isDone =
+              allCompleted || (mode === 'progress' && activeIndex > idx);
+            const isActive =
+              !allCompleted &&
+              mode === 'progress' &&
+              (agent.id === activeAgentId || agent.id === secondaryAgentId);
+
+            return `
+              <li class="flex flex-col items-center text-center">
+                <div class="relative flex items-center justify-center">
+                  ${
+                    mode === 'hero'
+                      ? `<span class="animate-hero-node absolute inset-0 rounded-full border border-sky-300/60" style="animation-delay: ${(idx * 0.45).toFixed(2)}s" aria-hidden="true"></span>`
+                      : ''
+                  }
+                  ${
+                    isActive
+                      ? `<span class="animate-active-ring absolute -inset-1.5 rounded-full border-2 border-amber-300/80" aria-hidden="true"></span>`
+                      : ''
+                  }
+                  <div class="relative z-10 flex h-10 w-10 items-center justify-center rounded-full border text-sm font-semibold tabular-nums transition-colors duration-200 ${
+                    isDone
+                      ? 'border-emerald-400 bg-emerald-500 text-white'
+                      : isActive
+                        ? 'border-amber-300 bg-amber-400 text-slate-950 shadow-sm'
+                        : mode === 'hero'
+                          ? 'border-sky-300/45 bg-[#16315C] text-white'
+                          : 'border-white/25 bg-[#152E56] text-white/70'
+                  }">
+                    ${isDone ? ICONS.check('h-[18px] w-[18px]') : agent.order}
+                  </div>
+                </div>
+                <span class="mt-2.5 text-xs font-semibold leading-tight tracking-wide whitespace-nowrap ${
+                  isActive
+                    ? 'text-amber-200'
+                    : isDone
+                      ? 'text-emerald-200'
+                      : mode === 'hero'
+                        ? 'text-white'
+                        : 'text-slate-300'
+                }">${escapeHtml(agent.shortName)}</span>
+                ${
+                  mode === 'hero'
+                    ? `<span class="mt-0.5 text-[11px] leading-snug text-slate-300/90 max-w-[130px]">${escapeHtml(agent.stageLabel)}</span>`
+                    : ''
+                }
+              </li>
+            `;
+          }).join('');
+
+          const mobileNodesHtml = AGENTS.map((agent, idx) => {
+            const isDone =
+              allCompleted || (mode === 'progress' && activeIndex > idx);
+            const isActive =
+              !allCompleted &&
+              mode === 'progress' &&
+              (agent.id === activeAgentId || agent.id === secondaryAgentId);
+
+            return `
+              <li class="flex items-center gap-2 rounded-lg border px-2.5 py-2 text-xs transition-colors ${
+                isActive
+                  ? 'border-amber-300 bg-amber-400/15 text-amber-100 font-semibold'
+                  : isDone
+                    ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100'
+                    : 'border-white/15 bg-white/5 text-slate-200'
+              }">
+                <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums ${
+                  isDone
+                    ? 'bg-emerald-500 text-white'
+                    : isActive
+                      ? 'bg-amber-400 text-slate-950'
+                      : 'bg-white/15 text-white'
+                }">
+                  ${isDone ? ICONS.check('h-3 w-3') : agent.order}
+                </span>
+                <span class="truncate">${escapeHtml(agent.shortName)}</span>
+              </li>
+            `;
+          }).join('');
+
+          return `
+            <div class="w-full" aria-label="Конвейер из шести агентов">
+              <div class="relative hidden md:block pt-2 pb-1">
+                <div class="absolute top-[27px] left-[8%] right-[8%] h-[2px] bg-white/20" aria-hidden="true">
+                  ${desktopTrackHtml}
+                </div>
+                <ol class="relative grid grid-cols-6 gap-2">${desktopNodesHtml}</ol>
+              </div>
+              <ol class="grid grid-cols-3 gap-2 md:hidden">${mobileNodesHtml}</ol>
+            </div>
+          `;
+        }
+
+        function renderHomeView() {
+          const cardsHtml = SCENARIOS.map(
+            (sc) => `
+            <article class="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+              <div>
+                <div class="flex flex-wrap items-center gap-1.5 text-xs font-medium text-slate-500 tabular-nums">
+                  <span>Сценарий ${sc.number}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>${escapeHtml(sc.workshop)}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>${sc.stepsCount} шагов</span>
+                </div>
+                <h3 class="font-display mt-3 text-lg font-bold leading-snug text-slate-900">
+                  ${escapeHtml(sc.title)}
+                </h3>
+                <p class="mt-2.5 text-sm leading-relaxed text-slate-600">
+                  ${escapeHtml(sc.cardSummary)}
+                </p>
+                <p class="mt-4 text-xs font-medium text-slate-500">
+                  Роль: ${escapeHtml(sc.foremanRole)}
+                </p>
+              </div>
+              <div class="mt-6 pt-4 border-t border-slate-100">
+                <button type="button" data-action="start-scenario" data-scenario="${sc.id}" class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#1B3A6B] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#142D54] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B3A6B] whitespace-nowrap">
+                  <span>Разобрать</span>
+                  ${ICONS.arrowRight('h-4 w-4')}
+                </button>
+              </div>
+            </article>
+          `
+          ).join('');
+
+          const agentsHtml = AGENTS.map(
+            (ag) => `
+            <div class="border-t border-slate-200 pt-4">
+              <div class="flex items-baseline gap-2.5">
+                <span class="font-mono-tabular text-xs font-semibold text-[#1B3A6B]">0${ag.order}.</span>
+                <h3 class="font-display text-base font-bold text-slate-900">${escapeHtml(ag.name)}</h3>
+              </div>
+              <p class="mt-2 text-sm leading-relaxed text-slate-600">${escapeHtml(ag.fullSpecification)}</p>
+            </div>
+          `
+          ).join('');
+
+          const rulesHtml = SYSTEM_RULES.map(
+            (rule, idx) => `
+            <li class="flex gap-2.5">
+              <span class="font-mono-tabular mt-0.5 text-xs font-semibold text-[#1B3A6B]">${idx + 1}.</span>
+              <span>${escapeHtml(rule)}</span>
+            </li>
+          `
+          ).join('');
+
+          return `
+            <main class="pb-20">
+              <section class="relative overflow-hidden text-white" style="background: linear-gradient(145deg, #1B3A6B 0%, #132B52 55%, #0A1830 100%);">
+                <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+                  <div class="max-w-4xl">
+                    <h1 class="font-display text-3xl font-bold tracking-tight text-white sm:text-5xl leading-[1.15]" style="text-wrap: balance;">
+                      Как узнать, что творится в цехах, не обходя их лично?
+                    </h1>
+                    <p class="mt-4 max-w-3xl text-base leading-relaxed text-slate-200 sm:text-lg">
+                      AI-диспетчер сам собирает сменное задание, ловит отклонения от плана и выясняет причину каждого простоя — прямо во время смены
+                    </p>
+                    <div class="mt-7 flex flex-wrap items-center gap-4">
+                      <button type="button" data-action="start-scenario" data-scenario="scenario-1" class="font-display inline-flex cursor-pointer items-center gap-2.5 rounded-lg bg-amber-400 px-6 py-3.5 text-base font-bold text-slate-950 shadow-sm transition-all duration-150 hover:bg-amber-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 whitespace-nowrap">
+                        <span>Смотреть пример</span>
+                        ${ICONS.arrowRight('h-[18px] w-[18px]')}
+                      </button>
+                    </div>
+                  </div>
+                  <div class="mt-10 border-t border-white/15 pt-8">
+                    <p class="mb-4 text-xs font-semibold tracking-wide text-sky-200/90">
+                      Конвейер из шести агентов работает последовательно в диалоге с мастером смены
+                    </p>
+                    ${renderConveyor({ mode: 'hero' })}
+                  </div>
+                </div>
+              </section>
+
+              <section id="scenarios" class="mx-auto max-w-6xl px-4 pt-12 sm:px-6">
+                <div class="mb-6 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                  <div>
+                    <h2 class="font-display text-2xl font-bold tracking-tight text-slate-900">
+                      Выберите смену для разбора
+                    </h2>
+                    <p class="mt-1 text-sm text-slate-600">
+                      Вы играете роль мастера смены: выбирайте реплики, а панель агентов покажет расчёт и логику системы.
+                    </p>
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-3">${cardsHtml}</div>
+              </section>
+
+              <section id="architecture" class="mx-auto max-w-6xl px-4 pt-16 sm:px-6">
+                <div class="border-t border-slate-200 pt-12">
+                  <div class="max-w-3xl">
+                    <h2 class="font-display text-2xl font-bold tracking-tight text-slate-900">
+                      Как устроена агентная система «Диспетчер смены»
+                    </h2>
+                    <p class="mt-3 text-base leading-relaxed text-slate-600">
+                      ${escapeHtml(PROJECT_DESCRIPTION)}
+                    </p>
+                  </div>
+                  <div class="mt-8 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">${agentsHtml}</div>
+                </div>
+              </section>
+
+              <section id="rules" class="mx-auto max-w-6xl px-4 pt-14 sm:px-6">
+                <div class="grid grid-cols-1 gap-8 border-t border-slate-200 pt-10 lg:grid-cols-12">
+                  <div class="lg:col-span-7">
+                    <h3 class="font-display text-lg font-bold text-slate-900">
+                      Правила работы и классификатор простоев
+                    </h3>
+                    <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-slate-600">${rulesHtml}</ul>
+                    <div class="mt-6">
+                      <p class="text-xs font-semibold text-slate-500">
+                        Пять групп классификатора причин простоя
+                      </p>
+                      <p class="mt-1.5 text-sm font-medium text-slate-800">
+                        ${escapeHtml(DOWNTIME_CLASSIFIER_GROUPS.join(' · '))}
+                      </p>
+                    </div>
+                  </div>
+                  <div class="space-y-5 lg:col-span-5">
+                    <div>
+                      <p class="text-xs font-semibold text-slate-500">Команда запуска системы</p>
+                      <p class="font-mono-tabular mt-1.5 rounded-lg border border-slate-200 bg-white px-4 py-3 text-xs leading-relaxed text-slate-800">
+                        ${escapeHtml(SYSTEM_LAUNCH_COMMAND)}
+                      </p>
+                    </div>
+                    <div>
+                      <p class="text-xs font-semibold text-slate-500">Формат итоговой сводки</p>
+                      <p class="font-mono-tabular mt-1.5 rounded-lg border border-slate-200 bg-white px-4 py-3 text-xs leading-relaxed text-slate-700">
+                        ${escapeHtml(SYSTEM_OUTPUT_FORMAT)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </main>
+          `;
+        }
+
+        function buildSimulationHeaderHTML() {
+          const sc = getActiveScenario();
+          const currentStep = sc.steps[state.currentStepIdx];
+
+          return `
+            <div class="mx-auto max-w-6xl px-4 py-5 sm:px-6">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div class="flex flex-wrap items-center gap-2 text-xs text-sky-200">
+                    <span>Сценарий ${sc.number}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>${escapeHtml(sc.workshop)}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>${escapeHtml(sc.shiftWindow)}</span>
+                  </div>
+                  <h1 class="font-display mt-1 text-lg font-bold tracking-tight text-white sm:text-xl">
+                    ${escapeHtml(sc.title)}
+                  </h1>
+                  <p class="mt-0.5 text-xs text-slate-300">
+                    Ваша роль: ${escapeHtml(sc.foremanRole)}
+                  </p>
+                </div>
+                <div class="flex items-center gap-3 self-start sm:self-center">
+                  <div class="rounded-lg border border-white/20 bg-white/10 px-3.5 py-2 text-right">
+                    <span class="block text-[11px] text-sky-200">Прогресс</span>
+                    <span class="font-mono-tabular text-sm font-bold text-white">
+                      Шаг ${currentStep.stepNumber} из ${sc.stepsCount}
+                    </span>
+                  </div>
+                  <button type="button" data-action="start-scenario" data-scenario="${sc.id}" title="Начать сценарий сначала" class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/20 bg-white/5 px-3 py-2.5 text-xs font-medium text-slate-200 transition-colors hover:bg-white/15 whitespace-nowrap">
+                    ${ICONS.rotateCcw('h-3.5 w-3.5')}
+                    <span class="hidden sm:inline">Заново</span>
+                  </button>
+                </div>
+              </div>
+              <div class="mt-5 border-t border-white/15 pt-4">
+                ${renderConveyor({
+                  mode: 'progress',
+                  activeAgentId: currentStep.agentId,
+                  secondaryAgentId: currentStep.secondaryAgentId,
+                  allCompleted: state.allAgentsDone,
+                })}
+              </div>
+            </div>
+          `;
+        }
+
+        function buildMessagesFeedHTML() {
+          const sc = getActiveScenario();
+          const msgsHtml = state.messages
+            .map((msg) => {
+              const isMaster = msg.sender === 'master';
+              const senderLabel = isMaster
+                ? `Мастер (${sc.foremanName})`
+                : msg.agentName || 'Диспетчер смены';
+
+              const bubbleClass = isMaster
+                ? 'bg-[#1B3A6B] text-white'
+                : msg.isArbitraryFallback
+                  ? 'border border-amber-200 bg-amber-50 text-slate-800'
+                  : 'border border-slate-200 bg-slate-50 text-slate-900';
+
+              const fallbackButtons = msg.isArbitraryFallback
+                ? `<div class="mt-3 flex flex-wrap gap-2 border-t border-amber-200/80 pt-3">
+                    ${SCENARIOS.map(
+                      (s) =>
+                        `<button type="button" data-action="start-scenario" data-scenario="${s.id}" class="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-[#1B3A6B] transition-colors hover:border-[#1B3A6B] hover:bg-blue-50 whitespace-nowrap">Сценарий ${s.number}: ${escapeHtml(s.workshop)}</button>`
+                    ).join('')}
+                  </div>`
+                : '';
+
+              return `
+                <div class="flex flex-col ${isMaster ? 'items-end' : 'items-start'} ${
+                  msg.animateIn ? 'animate-msg-enter' : ''
+                }">
+                  <span class="mb-1 text-[11px] font-semibold text-slate-500">${escapeHtml(senderLabel)}</span>
+                  <div class="max-w-[90%] rounded-xl px-4 py-3 text-sm leading-relaxed ${bubbleClass}">
+                    <p>${escapeHtml(msg.text)}</p>
+                    ${fallbackButtons}
+                  </div>
+                </div>
+              `;
+            })
+            .join('');
+
+          const typingHtml = state.isTyping
+            ? `
+              <div class="flex flex-col items-start">
+                <span class="mb-1 text-[11px] font-semibold text-slate-500">${escapeHtml(state.typingAgentName)}</span>
+                <div class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-medium text-slate-600">
+                  <span>печатает…</span>
+                  <span class="inline-flex items-center gap-1" aria-hidden="true">
+                    <span class="h-1.5 w-1.5 rounded-full bg-slate-400 typing-dot-1"></span>
+                    <span class="h-1.5 w-1.5 rounded-full bg-slate-400 typing-dot-2"></span>
+                    <span class="h-1.5 w-1.5 rounded-full bg-slate-400 typing-dot-3"></span>
+                  </span>
+                </div>
+              </div>
+            `
+            : '';
+
+          return `${msgsHtml}${typingHtml}<div id="messages-end"></div>`;
+        }
+
+        function buildReplyAreaHTML() {
+          const sc = getActiveScenario();
+          const currentStep = sc.steps[state.currentStepIdx];
+
+          if (state.isShiftFinished) {
+            return `
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm font-medium text-slate-700">
+                  Все данные смены собраны агентами. Итоговый отчёт готов.
+                </p>
+                <button type="button" data-action="complete-shift" class="font-display inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-amber-400 px-6 py-3 text-sm font-bold text-slate-950 shadow-sm transition-colors hover:bg-amber-300 whitespace-nowrap shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B3A6B]">
+                  <span>Открыть итог смены</span>
+                  ${ICONS.arrowRight('h-4 w-4')}
+                </button>
+              </div>
+            `;
+          }
+
+          const optionsHtml = currentStep.options
+            .map((opt) => {
+              const alreadyAsked = state.askedOptionIds.includes(opt.id);
+              const disabled =
+                state.isTyping || state.isTransitioning || alreadyAsked;
+              const cls = alreadyAsked
+                ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 line-through'
+                : disabled
+                  ? 'cursor-wait border-slate-200 bg-white text-slate-400'
+                  : 'cursor-pointer border-slate-300 bg-white text-slate-900 shadow-xs hover:border-[#1B3A6B] hover:bg-blue-50/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B3A6B]';
+
+              return `
+                <button type="button" data-action="choose-option" data-option-id="${opt.id}" ${
+                  disabled ? 'disabled' : ''
+                } class="group flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left text-sm font-medium transition-all duration-150 ${cls}">
+                  <span>${escapeHtml(opt.text)}</span>
+                  ${
+                    !alreadyAsked
+                      ? ICONS.arrowRight(
+                          'h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#1B3A6B]'
+                        )
+                      : ''
+                  }
+                </button>
+              `;
+            })
+            .join('');
+
+          return `
+            <div>
+              <p class="mb-2.5 text-xs font-semibold text-slate-500">Ваш ответ как мастера смены:</p>
+              <div class="flex flex-col gap-2">${optionsHtml}</div>
+            </div>
+          `;
+        }
+
+        function buildAgentPanelHTML() {
+          const sc = getActiveScenario();
+          const currentStep = sc.steps[state.currentStepIdx];
+          const activeAgent = AGENTS.find((a) => a.id === currentStep.agentId);
+
+          const toneStyles = {
+            neutral: 'text-slate-900',
+            nominal: 'text-emerald-700',
+            warning: 'text-amber-700',
+            alert: 'text-red-700',
+          };
+
+          const fieldsHtml = state.panelFields
+            .map((field) => {
+              const isFlashing = state.changedFieldKeys.includes(field.key);
+              return `
+                <div class="flex items-baseline justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 transition-colors ${
+                  isFlashing ? 'animate-field-flash' : ''
+                }">
+                  <span class="text-xs font-medium text-slate-600">${escapeHtml(field.label)}</span>
+                  <span class="font-mono-tabular text-sm font-bold text-right ${
+                    toneStyles[field.tone || 'neutral']
+                  }">${escapeHtml(field.value)}</span>
+                </div>
+              `;
+            })
+            .join('');
+
+          const displayedLog =
+            state.stepLogs.find((l) => l.stepNumber === state.selectedLogStep) ||
+            state.stepLogs[state.stepLogs.length - 1];
+
+          const logTabsHtml =
+            state.stepLogs.length > 1
+              ? `<div class="flex flex-wrap gap-1.5">
+                  ${state.stepLogs
+                    .map((entry) => {
+                      const ag = AGENTS.find((a) => a.id === entry.agentId);
+                      const isSel = entry.stepNumber === state.selectedLogStep;
+                      return `<button type="button" data-action="select-log-step" data-step="${entry.stepNumber}" class="cursor-pointer rounded-md border px-2.5 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
+                        isSel
+                          ? 'border-[#1B3A6B] bg-[#1B3A6B] text-white'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      }">${entry.stepNumber}. ${escapeHtml(ag ? ag.shortName : '')}</button>`;
+                    })
+                    .join('')}
+                </div>`
+              : '';
+
+          const journalHtml = state.isJournalOpen
+            ? `
+              <div class="mt-3 space-y-4 text-sm">
+                ${logTabsHtml}
+                <div class="space-y-3 border-t border-slate-100 pt-3">
+                  <div>
+                    <span class="block text-xs font-semibold text-slate-500">Какой агент работал</span>
+                    <p class="mt-0.5 font-semibold text-slate-900">
+                      ${escapeHtml(displayedLog.reasoning.agentName)} (шаг ${displayedLog.stepNumber})
+                    </p>
+                  </div>
+                  <div>
+                    <span class="block text-xs font-semibold text-slate-500">Что получил на вход</span>
+                    <p class="mt-0.5 leading-relaxed text-slate-700">${escapeHtml(displayedLog.reasoning.receivedInput)}</p>
+                  </div>
+                  <div>
+                    <span class="block text-xs font-semibold text-slate-500">Что решил</span>
+                    <p class="mt-0.5 leading-relaxed text-slate-700">${escapeHtml(displayedLog.reasoning.decisionLogic)}</p>
+                  </div>
+                  <div>
+                    <span class="block text-xs font-semibold text-slate-500">Что передал дальше (структурированные данные)</span>
+                    <dl class="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-slate-100 pt-2 text-xs">
+                      <div>
+                        <dt class="text-slate-500">Цех</dt>
+                        <dd class="font-medium text-slate-900">${escapeHtml(displayedLog.reasoning.handoffPayload.workshop)}</dd>
+                      </div>
+                      <div>
+                        <dt class="text-slate-500">План</dt>
+                        <dd class="font-mono-tabular font-medium text-slate-900">${escapeHtml(displayedLog.reasoning.handoffPayload.plan)}</dd>
+                      </div>
+                      <div>
+                        <dt class="text-slate-500">Факт</dt>
+                        <dd class="font-mono-tabular font-medium text-slate-900">${escapeHtml(displayedLog.reasoning.handoffPayload.fact)}</dd>
+                      </div>
+                      <div>
+                        <dt class="text-slate-500">Отклонение</dt>
+                        <dd class="font-mono-tabular font-medium text-slate-900">${escapeHtml(displayedLog.reasoning.handoffPayload.deviation)}</dd>
+                      </div>
+                      <div>
+                        <dt class="text-slate-500">Простой</dt>
+                        <dd class="font-mono-tabular font-medium text-slate-900">${escapeHtml(displayedLog.reasoning.handoffPayload.downtimeMinutes)}</dd>
+                      </div>
+                      <div>
+                        <dt class="text-slate-500">Классификатор</dt>
+                        <dd class="font-medium text-slate-900">${escapeHtml(displayedLog.reasoning.handoffPayload.classifierReason)}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            `
+            : '';
+
+          return `
+            <div class="border-b border-slate-100 px-5 py-4">
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-xs font-semibold text-[#1B3A6B]">Активный агент · ${activeAgent.order} из 6</span>
+                <span class="font-mono-tabular text-xs text-slate-500">${escapeHtml(activeAgent.stageLabel)}</span>
+              </div>
+              <h2 class="font-display mt-1 text-xl font-bold text-slate-900">
+                ${escapeHtml(activeAgent.name)}${
+                  currentStep.secondaryAgentId === 'report' && state.allAgentsDone
+                    ? ' → Отчёт'
+                    : ''
+                }
+              </h2>
+              <p class="mt-1 text-sm text-slate-600">${escapeHtml(activeAgent.roleSummary)}</p>
+            </div>
+            <div class="px-5 py-4">
+              <p class="mb-3 text-xs font-semibold text-slate-500">Ключевые показатели шага</p>
+              <div class="grid grid-cols-1 gap-2.5">${fieldsHtml}</div>
+              <div class="mt-5 border-t border-slate-100 pt-4">
+                <button type="button" data-action="toggle-journal" aria-expanded="${state.isJournalOpen}" class="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-[#1B3A6B] transition-colors hover:border-[#1B3A6B]/40 hover:bg-blue-50/40">
+                  <span>Подробнее: как думали агенты</span>
+                  ${
+                    state.isJournalOpen
+                      ? ICONS.chevronUp('h-4 w-4 shrink-0')
+                      : ICONS.chevronDown('h-4 w-4 shrink-0')
+                  }
+                </button>
+                ${journalHtml}
+              </div>
+            </div>
+          `;
+        }
+
+        function renderSimulationView() {
+          const sc = getActiveScenario();
+          const showHint = !state.hasDismissedHint;
+
+          return `
+            <div class="min-h-[calc(100vh-61px)] bg-slate-50 pb-12">
+              <section id="sim-header" class="text-white" style="background: linear-gradient(145deg, #1B3A6B 0%, #132B52 60%, #0D1F3C 100%);">
+                ${buildSimulationHeaderHTML()}
+              </section>
+
+              <div class="mx-auto max-w-6xl px-4 pt-4 md:hidden">
+                <div id="mobile-tabs" class="grid grid-cols-2 gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1" role="tablist" aria-label="Режим просмотра">
+                  <button type="button" role="tab" data-action="switch-tab" data-tab="dialogue" aria-selected="${state.mobileTab === 'dialogue'}" class="cursor-pointer rounded-md px-3 py-2 text-sm font-semibold transition-colors whitespace-nowrap ${
+                    state.mobileTab === 'dialogue'
+                      ? 'bg-white text-[#1B3A6B] shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }">Диалог</button>
+                  <button type="button" role="tab" data-action="switch-tab" data-tab="agents" aria-selected="${state.mobileTab === 'agents'}" class="cursor-pointer rounded-md px-3 py-2 text-sm font-semibold transition-colors whitespace-nowrap ${
+                    state.mobileTab === 'agents'
+                      ? 'bg-white text-[#1B3A6B] shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }">Агенты${state.hasUnreadAgentUpdate ? ' (обновлено)' : ''}</button>
+                </div>
+              </div>
+
+              <div class="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
+                <div id="hint-container">
+                  ${
+                    showHint
+                      ? `<div class="mb-4 flex items-center justify-between gap-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm">
+                          <p class="font-medium">Вы — мастер смены: выбирайте реплики, а агенты покажут, как думает система</p>
+                          <button type="button" data-action="dismiss-hint" aria-label="Скрыть подсказку" class="cursor-pointer rounded-md p-1 text-amber-800 transition-colors hover:bg-amber-200/60 shrink-0">${ICONS.x('h-4 w-4')}</button>
+                        </div>`
+                      : ''
+                  }
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-12 md:items-start">
+                  <div id="dialogue-column" class="md:col-span-7 flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm ${
+                    state.mobileTab === 'dialogue' ? 'flex' : 'hidden md:flex'
+                  }">
+                    <div class="border-b border-slate-100 px-5 py-3 flex flex-wrap items-center justify-between gap-2">
+                      <span class="text-xs font-semibold text-slate-500">Команда запуска:</span>
+                      <span class="font-mono-tabular text-xs text-slate-700">«${escapeHtml(sc.launchCommand)}»</span>
+                    </div>
+
+                    <div id="messages-feed" class="flex-1 space-y-4 px-5 py-5 max-h-[460px] min-h-[300px] overflow-y-auto">
+                      ${buildMessagesFeedHTML()}
+                    </div>
+
+                    <div class="border-t border-slate-200 bg-slate-50/70 px-5 py-4">
+                      <div id="reply-area">${buildReplyAreaHTML()}</div>
+
+                      <form id="arbitrary-form" class="mt-4 flex items-center gap-2 border-t border-slate-200/80 pt-3.5">
+                        <label for="arbitrary-reply" class="sr-only">Произвольная реплика</label>
+                        <input id="arbitrary-reply" type="text" value="${escapeHtml(state.arbitraryInput)}" placeholder="Написать произвольную реплику…" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#1B3A6B] focus:outline-none" />
+                        <button id="arbitrary-submit" type="submit" disabled class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap shrink-0">
+                          ${ICONS.send('h-3.5 w-3.5')}
+                          <span class="hidden sm:inline">Отправить</span>
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+
+                  <aside id="agent-panel" class="md:col-span-5 rounded-xl border border-slate-200 bg-white shadow-sm ${
+                    state.mobileTab === 'agents' ? 'block' : 'hidden md:block'
+                  }">
+                    ${buildAgentPanelHTML()}
+                  </aside>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        function animateSignalDot() {
+          const dot = document.getElementById('progress-signal-dot');
+          if (!dot) return;
+          const target = dot.getAttribute('data-target-left');
+          if (!target) return;
+          requestAnimationFrame(() => {
+            dot.style.left = target;
+          });
+        }
+
+        function updateSimulationDOM() {
+          if (state.mode !== 'simulation') return;
+
+          const headerEl = document.getElementById('sim-header');
+          if (headerEl) {
+            headerEl.innerHTML = buildSimulationHeaderHTML();
+            animateSignalDot();
+          }
+
+          const hintEl = document.getElementById('hint-container');
+          if (hintEl && state.hasDismissedHint) {
+            hintEl.innerHTML = '';
+          }
+
+          const feedEl = document.getElementById('messages-feed');
+          if (feedEl) {
+            feedEl.innerHTML = buildMessagesFeedHTML();
+            const endMarker = document.getElementById('messages-end');
+            if (endMarker) {
+              endMarker.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+          }
+
+          const replyEl = document.getElementById('reply-area');
+          if (replyEl) {
+            replyEl.innerHTML = buildReplyAreaHTML();
+          }
+
+          const panelEl = document.getElementById('agent-panel');
+          if (panelEl) {
+            panelEl.innerHTML = buildAgentPanelHTML();
+          }
+
+          const tabsEl = document.getElementById('mobile-tabs');
+          if (tabsEl) {
+            const tabButtons = tabsEl.querySelectorAll('[data-action="switch-tab"]');
+            tabButtons.forEach((btn) => {
+              const t = btn.getAttribute('data-tab');
+              const active = state.mobileTab === t;
+              btn.setAttribute('aria-selected', String(active));
+              btn.className = `cursor-pointer rounded-md px-3 py-2 text-sm font-semibold transition-colors whitespace-nowrap ${
+                active
+                  ? 'bg-white text-[#1B3A6B] shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`;
+              if (t === 'agents') {
+                btn.textContent = `Агенты${state.hasUnreadAgentUpdate ? ' (обновлено)' : ''}`;
+              }
+            });
+          }
+
+          const diagCol = document.getElementById('dialogue-column');
+          const agentCol = document.getElementById('agent-panel');
+          if (diagCol && agentCol) {
+            diagCol.className = `md:col-span-7 flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm ${
+              state.mobileTab === 'dialogue' ? 'flex' : 'hidden md:flex'
+            }`;
+            agentCol.className = `md:col-span-5 rounded-xl border border-slate-200 bg-white shadow-sm ${
+              state.mobileTab === 'agents' ? 'block' : 'hidden md:block'
+            }`;
+          }
+
+          const submitBtn = document.getElementById('arbitrary-submit');
+          const inputEl = document.getElementById('arbitrary-reply');
+          if (submitBtn && inputEl) {
+            submitBtn.disabled = !inputEl.value.trim() || state.isTransitioning;
+          }
+        }
+
+        function renderOutcomeView() {
+          const sc = getActiveScenario();
+          const outcome = getActiveOutcome();
+          const otherScenarios = SCENARIOS.filter((s) => s.id !== sc.id);
+
+          const downtimeHtml = outcome.downtimeChronology
+            .map(
+              (item, idx) => `
+              <li class="flex items-start gap-3 border-t border-slate-100 pt-3 first:border-t-0 first:pt-0 text-sm leading-relaxed text-slate-700">
+                <span class="font-mono-tabular mt-0.5 text-xs font-bold text-[#1B3A6B]">0${idx + 1}.</span>
+                <span>${escapeHtml(item)}</span>
+              </li>
+            `
+            )
+            .join('');
+
+          const conclusionsHtml = outcome.conclusions
+            .map(
+              (line) => `
+              <li class="flex items-start gap-2.5 text-sm leading-relaxed text-slate-700">
+                ${ICONS.checkCircle2('mt-0.5 h-4 w-4 shrink-0 text-[#1B3A6B]')}
+                <span>${escapeHtml(line)}</span>
+              </li>
+            `
+            )
+            .join('');
+
+          const recsHtml = outcome.recommendations
+            .map(
+              (rec, idx) => `
+              <li class="flex items-start gap-2.5 text-sm leading-relaxed text-slate-700">
+                <span class="font-mono-tabular mt-0.5 text-xs font-bold text-[#1B3A6B]">${idx + 1}.</span>
+                <span>${escapeHtml(rec)}</span>
+              </li>
+            `
+            )
+            .join('');
+
+          const pickerHtml = state.showScenarioPicker
+            ? `<div id="outcome-scenario-picker" class="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2">
+                ${otherScenarios
+                  .map(
+                    (s) => `
+                    <button type="button" data-action="start-scenario" data-scenario="${s.id}" class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-[#1B3A6B] hover:shadow-md">
+                      <div>
+                        <span class="text-xs font-medium text-slate-500">Сценарий ${s.number} · ${escapeHtml(s.workshop)} · ${s.stepsCount} шагов</span>
+                        <p class="font-display mt-1 text-base font-bold text-slate-900">${escapeHtml(s.title)}</p>
+                      </div>
+                      ${ICONS.arrowRight('h-4 w-4 shrink-0 text-[#1B3A6B]')}
+                    </button>
+                  `
+                  )
+                  .join('')}
+              </div>`
+            : `<div id="outcome-scenario-picker"></div>`;
+
+          return `
+            <main class="min-h-[calc(100vh-61px)] bg-slate-50 pb-16">
+              <section class="text-white" style="background: linear-gradient(145deg, #1B3A6B 0%, #132B52 55%, #0A1830 100%);">
+                <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
+                  <div class="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="max-w-2xl">
+                      <p class="text-xs font-semibold tracking-wide text-sky-200">
+                        Агент «Отчёт» · Итог смены
+                      </p>
+                      <h1 class="font-display mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                        Итог смены: ${escapeHtml(sc.title)}
+                      </h1>
+                      <p class="mt-2 text-sm text-slate-200">${escapeHtml(outcome.shiftLabel)}</p>
+                    </div>
+                    <div class="flex items-center gap-5 rounded-xl border border-white/20 bg-white/10 px-6 py-5 shrink-0">
+                      <div>
+                        <span class="block text-xs font-medium text-sky-200">Балл смены</span>
+                        <div class="mt-1 flex items-baseline gap-1.5">
+                          <span id="outcome-score-counter" class="font-mono-tabular text-5xl font-bold text-amber-300">0</span>
+                          <span class="font-mono-tabular text-lg font-medium text-slate-300">/ 100</span>
+                        </div>
+                      </div>
+                      <div class="border-l border-white/20 pl-5 max-w-[190px]">
+                        <span class="block text-xs font-semibold text-white">${escapeHtml(outcome.scoreVerdict)}</span>
+                        <span class="mt-1 block text-xs text-slate-300">Зачёт только по годной продукции</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-8 border-t border-white/15 pt-6">
+                    ${renderConveyor({ mode: 'progress', allCompleted: true })}
+                  </div>
+                </div>
+              </section>
+
+              <div class="mx-auto max-w-6xl px-4 pt-8 sm:px-6">
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <section class="animate-outcome-reveal rounded-xl border border-slate-200 bg-white p-6 shadow-sm" style="animation-delay: 0.15s">
+                    <h2 class="text-xs font-semibold text-slate-500">План и факт</h2>
+                    <p class="font-display mt-2 text-xl font-bold text-slate-900 tabular-nums">${escapeHtml(outcome.planFact)}</p>
+                    ${
+                      outcome.extraQualityLine
+                        ? `<p class="mt-2 text-sm font-medium text-slate-700">${escapeHtml(outcome.extraQualityLine)}</p>`
+                        : ''
+                    }
+                  </section>
+
+                  <section class="animate-outcome-reveal rounded-xl border border-slate-200 bg-white p-6 shadow-sm" style="animation-delay: 0.35s">
+                    <h2 class="text-xs font-semibold text-slate-500">Отклонение от графика</h2>
+                    <p class="font-display mt-2 text-xl font-bold text-slate-900 tabular-nums">${escapeHtml(outcome.deviation)}</p>
+                    <p class="mt-2 text-sm text-slate-600">
+                      Допуск системы: −10%. Статус зафиксирован агентом «Контролёр».
+                    </p>
+                  </section>
+                </div>
+
+                <section class="animate-outcome-reveal mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm" style="animation-delay: 0.55s">
+                  <h2 class="font-display text-lg font-bold text-slate-900">Хронология простоев и причины</h2>
+                  <ul class="mt-4 space-y-3">${downtimeHtml}</ul>
+                </section>
+
+                <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <section class="animate-outcome-reveal rounded-xl border border-slate-200 bg-white p-6 shadow-sm" style="animation-delay: 0.75s">
+                    <h2 class="font-display text-lg font-bold text-slate-900">Выводы по смене</h2>
+                    <ul class="mt-4 space-y-2.5">${conclusionsHtml}</ul>
+                  </section>
+
+                  <section class="animate-outcome-reveal rounded-xl border border-slate-200 bg-white p-6 shadow-sm" style="animation-delay: 0.95s">
+                    <h2 class="font-display text-lg font-bold text-slate-900">Рекомендации на следующую смену</h2>
+                    <ul class="mt-4 space-y-2.5">${recsHtml}</ul>
+                  </section>
+                </div>
+
+                <section class="animate-outcome-reveal mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm" style="animation-delay: 1.1s">
+                  <p class="text-xs font-semibold text-slate-500">Сформированная запись журнала (формат вывода системы)</p>
+                  <p class="font-mono-tabular mt-2 text-xs leading-relaxed text-slate-800">${escapeHtml(outcome.formattedSummary)}</p>
+                </section>
+
+                <div class="animate-outcome-reveal mt-8 flex flex-col gap-4" style="animation-delay: 1.2s">
+                  <div class="flex flex-wrap items-center gap-3">
+                    <button type="button" data-action="toggle-outcome-picker" class="font-display inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#1B3A6B] px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#142D54] whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B3A6B]">
+                      <span>Пройти другой сценарий</span>
+                      ${ICONS.arrowRight('h-4 w-4')}
+                    </button>
+
+                    <button type="button" data-action="go-home" class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50 whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B3A6B]">
+                      <span>Вернуться на главную</span>
+                    </button>
+
+                    ${
+                      sc.id === 'scenario-1'
+                        ? `<button type="button" data-action="replay-step5" class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950 transition-colors hover:bg-amber-100 whitespace-nowrap">
+                            ${ICONS.rotateCcw('h-4 w-4')}
+                            <span>Переиграть шаг 5 (другое решение)</span>
+                          </button>`
+                        : ''
+                    }
+                  </div>
+                  ${pickerHtml}
+                </div>
+              </div>
+            </main>
+          `;
+        }
+
+        function startScoreCounter(targetScore) {
+          const el = document.getElementById('outcome-score-counter');
+          if (!el) return;
+
+          if (prefersReducedMotion()) {
+            el.textContent = String(targetScore);
+            return;
+          }
+
+          const duration = 1100;
+          const start = performance.now();
+
+          function tick(now) {
+            const elapsed = now - start;
+            const t = Math.min(1, elapsed / duration);
+            const eased = 1 - Math.pow(1 - t, 3);
+            el.textContent = String(Math.round(eased * targetScore));
+            if (t < 1) {
+              scoreRafId = requestAnimationFrame(tick);
+            }
+          }
+
+          el.textContent = '0';
+          scoreRafId = requestAnimationFrame(tick);
+        }
+
+        // ============================================================
+        // 7. ROOT RENDER & EVENT DELEGATION
+        // ============================================================
+        function renderApp() {
+          const root = document.getElementById('root');
+          if (!root) return;
+
+          let bodyHtml = '';
+          if (state.mode === 'home') {
+            bodyHtml = renderHomeView();
+          } else if (state.mode === 'simulation') {
+            bodyHtml = renderSimulationView();
+          } else {
+            bodyHtml = renderOutcomeView();
+          }
+
+          root.innerHTML = `
+            <div class="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+              ${renderTopBar()}
+              ${bodyHtml}
+            </div>
+          `;
+
+          if (state.mode === 'simulation') {
+            animateSignalDot();
+          } else if (state.mode === 'outcome') {
+            startScoreCounter(getActiveOutcome().score);
+          }
+        }
+
+        document.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-action]');
+          if (!btn) return;
+          const action = btn.getAttribute('data-action');
+
+          if (action === 'go-home') {
+            goHome();
+          } else if (action === 'start-scenario') {
+            const id = btn.getAttribute('data-scenario');
+            if (id) startScenario(id, 0);
+          } else if (action === 'scroll') {
+            const targetId = btn.getAttribute('data-target');
+            const el = targetId && document.getElementById(targetId);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else if (action === 'dismiss-hint') {
+            state.hasDismissedHint = true;
+            const hintEl = document.getElementById('hint-container');
+            if (hintEl) hintEl.innerHTML = '';
+          } else if (action === 'choose-option') {
+            const optId = btn.getAttribute('data-option-id');
+            if (optId) handleOptionClick(optId);
+          } else if (action === 'complete-shift') {
+            completeShift();
+          } else if (action === 'toggle-journal') {
+            state.isJournalOpen = !state.isJournalOpen;
+            const panelEl = document.getElementById('agent-panel');
+            if (panelEl) panelEl.innerHTML = buildAgentPanelHTML();
+          } else if (action === 'select-log-step') {
+            const stepNum = Number(btn.getAttribute('data-step'));
+            if (!Number.isNaN(stepNum)) {
+              state.selectedLogStep = stepNum;
+              const panelEl = document.getElementById('agent-panel');
+              if (panelEl) panelEl.innerHTML = buildAgentPanelHTML();
+            }
+          } else if (action === 'switch-tab') {
+            const tab = btn.getAttribute('data-tab');
+            if (tab === 'dialogue' || tab === 'agents') {
+              state.mobileTab = tab;
+              if (tab === 'agents') state.hasUnreadAgentUpdate = false;
+              updateSimulationDOM();
+            }
+          } else if (action === 'toggle-outcome-picker') {
+            state.showScenarioPicker = !state.showScenarioPicker;
+            const pickerEl = document.getElementById('outcome-scenario-picker');
+            if (pickerEl) {
+              const sc = getActiveScenario();
+              const otherScenarios = SCENARIOS.filter((s) => s.id !== sc.id);
+              pickerEl.outerHTML = state.showScenarioPicker
+                ? `<div id="outcome-scenario-picker" class="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2">
+                    ${otherScenarios
+                      .map(
+                        (s) => `
+                        <button type="button" data-action="start-scenario" data-scenario="${s.id}" class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-[#1B3A6B] hover:shadow-md">
+                          <div>
+                            <span class="text-xs font-medium text-slate-500">Сценарий ${s.number} · ${escapeHtml(s.workshop)} · ${s.stepsCount} шагов</span>
+                            <p class="font-display mt-1 text-base font-bold text-slate-900">${escapeHtml(s.title)}</p>
+                          </div>
+                          ${ICONS.arrowRight('h-4 w-4 shrink-0 text-[#1B3A6B]')}
+                        </button>
+                      `
+                      )
+                      .join('')}
+                  </div>`
+                : `<div id="outcome-scenario-picker"></div>`;
+            }
+          } else if (action === 'replay-step5') {
+            startScenario('scenario-1', 4);
+          }
+        });
+
+        document.addEventListener('input', (e) => {
+          if (e.target && e.target.id === 'arbitrary-reply') {
+            state.arbitraryInput = e.target.value;
+            const submitBtn = document.getElementById('arbitrary-submit');
+            if (submitBtn) {
+              submitBtn.disabled = !state.arbitraryInput.trim() || state.isTransitioning;
+            }
+          }
+        });
+
+        document.addEventListener('submit', (e) => {
+          if (e.target && e.target.id === 'arbitrary-form') {
+            e.preventDefault();
+            const inputEl = document.getElementById('arbitrary-reply');
+            if (inputEl) {
+              const val = inputEl.value;
+              inputEl.value = '';
+              handleArbitrarySubmit(val);
+            }
+          }
+        });
+
+        // Boot
+        renderApp();
+      })();
+    </script>
   </body>
 </html>
-
